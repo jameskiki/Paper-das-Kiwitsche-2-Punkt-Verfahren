@@ -1,0 +1,133 @@
+\section{Methodology: The Kiwitsche 2-Punkt-Verfahren}
+\label{sec:methodology}
+
+The Kiwitsche 2-Punkt-Verfahren (KZV) consists of four sequential phases,
+described below.
+An overview is shown in \cref{fig:kzv_flowchart}.
+
+% \begin{figure}[H]
+%     \centering
+%     \includegraphics[width=0.7\linewidth]{figures/kzv_flowchart.pdf}
+%     \caption{Flow chart of the Kiwitsche 2-Punkt-Verfahren.}
+%     \label{fig:kzv_flowchart}
+% \end{figure}
+
+\subsection{Phase 1: Bang-Bang Excitation}
+\label{sec:method:phase1}
+
+\begin{enumerate}
+    \item Set the Bang-Bang controller parameters:
+          switching amplitude $M = (U_{\max} - U_{\min})/2$ and hysteresis
+          band $d$.
+          For most processes, a hysteresis of $d \approx 0.5\text{--}2\%$ of
+          the measurement range is appropriate.
+    \item Set the setpoint $r$ to a representative operating point
+          (e.g.\ the desired cooling temperature).
+    \item Enable the Bang-Bang controller and wait until the output $y(t)$
+          has settled into a \emph{stationary} limit cycle.
+          Stationarity is verified by checking that three consecutive
+          oscillation periods agree to within $\pm 5\%$.
+\end{enumerate}
+
+\subsection{Phase 2: Characteristic Extraction}
+\label{sec:method:phase2}
+
+Once a stationary limit cycle is established, record $N_{\min} = 5$
+consecutive oscillation cycles and compute:
+
+\begin{align}
+    \Tu &= \frac{1}{N} \sum_{k=1}^{N} (t_{k+1} - t_k), \label{eq:Tu_est} \\
+    \Au &= \frac{1}{N} \sum_{k=1}^{N} \bigl(y_{\max,k} - y_{\min,k}\bigr), \label{eq:Au_est}
+\end{align}
+where $t_k$ are the times of successive positive zero-crossings of $e(t)$,
+and $y_{\max,k}$, $y_{\min,k}$ are the maximum and minimum of $y(t)$ within
+each cycle.
+
+\subsection{Phase 3: Plant Identification}
+\label{sec:method:phase3}
+
+Using the measured quantities $(\Tu, \Au, d, M)$ and the recorded time
+series $(t, y, u)$, the FOPDT parameters are estimated as follows.
+
+\paragraph{Dead-time estimate.}
+For a FOPDT plant under Bang-Bang control, the output slope $\dot{y}(t)$
+changes sign from negative to positive exactly at $t = t_{\mathrm{sw}} + L$
+after a rising switch ($U_{\min} \to U_{\max}$), because only then does the
+new input value reach the plant through the dead-time element.
+The dead time is therefore estimated as
+\begin{equation}
+    \hat{L} = t_{\mathrm{sign-change}} - t_{\mathrm{sw}},
+    \label{eq:L_est}
+\end{equation}
+averaged over the last $N_{\min}$ rising-switch events.
+
+\paragraph{Time constant estimate.}
+At $t = t_{\mathrm{sw,fall}} + \hat{L}$ after a falling switch ($U_{\max} \to U_{\min}$),
+the FOPDT step-response slope for $U_{\min} = 0$ is
+\begin{equation}
+    \dot{y}\big|_{t_{\mathrm{sw,fall}} + \hat{L}}
+    = \frac{K \cdot U_{\min} - y_L}{T}
+    = \frac{-y_L}{T},
+    \label{eq:slope_fall}
+\end{equation}
+where $y_L = y(t_{\mathrm{sw,fall}} + \hat{L})$.
+Solving for $T$:
+\begin{equation}
+    \hat{T} = \frac{y_L}{|\dot{y}|_{t_{\mathrm{sw,fall}} + \hat{L}}},
+    \label{eq:T_est}
+\end{equation}
+averaged over the last $N_{\min}$ falling-switch events.
+
+\paragraph{Gain estimate.}
+At $t = t_{\mathrm{sw,rise}} + \hat{L}$ after a rising switch, the slope is
+\begin{equation}
+    \dot{y}\big|_{t_{\mathrm{sw,rise}} + \hat{L}}
+    = \frac{K \cdot U_{\max} - y_L}{T},
+    \label{eq:slope_rise}
+\end{equation}
+hence
+\begin{equation}
+    \hat{K} = \frac{\hat{T} \cdot \dot{y}_{L,\uparrow} + y_{L,\uparrow}}{U_{\max}},
+    \label{eq:K_est}
+\end{equation}
+averaged over the last $N_{\min}$ rising-switch events.
+
+\begin{remark}
+    \Cref{eq:T_est} is exact for $U_{\min} = 0$.
+    For $U_{\min} \neq 0$, an iterative refinement involving
+    $K \cdot U_{\min}$ is required; this case is not treated here.
+\end{remark}
+
+\subsection{Phase 4: PID Synthesis}
+\label{sec:method:phase4}
+
+With the identified FOPDT model $(\hat{K}, \hat{T}, \hat{L})$, apply the
+IMC-PID formulas \eqref{eq:Kp}--\eqref{eq:Td} with $\lambda = \hat{L}$:
+
+\begin{equation}
+    \boxed{
+    \Kp = \frac{\hat{T}}{\hat{K}(2\hat{L})},
+    \quad
+    \Ti = \hat{T},
+    \quad
+    \Td = \frac{\hat{L}}{2}.
+    }
+    \label{eq:pid_final}
+\end{equation}
+
+Switch the controller from Bang-Bang mode to PID mode.
+No additional plant experiment is required.
+
+\subsection{Implementation Notes}
+\label{sec:method:impl}
+
+\begin{itemize}
+    \item The procedure is implemented in the Python module
+          \texttt{analysis/parameter\_estimation.py}; see the repository for
+          source code.
+    \item All simulation and figure generation scripts are available in the
+          \texttt{python/} directory; see \texttt{README.md} for usage.
+    \item The same procedure can be implemented on a PLC or embedded
+          controller by storing a rolling buffer of the last $3\text{--}5$
+          oscillation cycles and computing the statistics online.
+\end{itemize}

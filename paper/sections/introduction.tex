@@ -1,0 +1,72 @@
+\section{Introduction}
+\label{sec:introduction}
+
+Proportional-Integral-Derivative (PID) controllers remain the dominant
+feedback control structure in industrial process control, accounting for more
+than 90\% of deployed control loops~\cite{Aastrom2006}.
+Despite their conceptual simplicity, choosing appropriate PID parameters for
+complex or poorly characterised plants continues to pose a practical challenge
+to control engineers.
+
+Classical tuning methods --- such as Ziegler--Nichols (ZN)~\cite{ZieglerNichols1942},
+Cohen--Coon~\cite{CohenCoon1953}, and Internal Model Control
+(IMC)~\cite{Rivera1986} --- require either an explicit step response
+experiment, knowledge of the ultimate gain, or a pre-identified process model.
+In industrial settings, performing open-loop step tests is often undesirable
+due to production constraints, safety considerations, or the time required to
+reach steady state.
+
+Two-point (Bang-Bang) controllers, on the other hand, are already widely
+deployed as simple thermostats and safety limiters in cooling, heating, and
+refrigeration systems.
+These controllers inherently drive the plant into a limit-cycle oscillation
+that encodes rich information about the plant dynamics.
+
+\subsection{Motivation}
+\label{sec:motivation}
+
+This paper proposes the \emph{Kiwitsche 2-Punkt-Verfahren} (KZV), a procedure
+that exploits the Bang-Bang limit cycle to identify the plant and synthesise
+a PID controller --- all without requiring an additional open-loop experiment.
+The key insight is that the limit cycle produced by a Bang-Bang controller
+with known switching levels is equivalent, in the describing-function sense,
+to the critical oscillation used in the Ziegler--Nichols closed-loop method.
+By additionally recovering the dead time from the phase of the oscillation,
+a complete FOPDT model can be estimated, enabling more robust IMC-style
+tuning.
+
+\subsection{Industrial Relevance: Cooling Systems}
+\label{sec:cooling}
+
+Industrial cooling systems (chillers, refrigeration circuits, climate control)
+are a prime application.
+Their thermal dynamics are well approximated by second-order-plus-dead-time
+(SOPDT) or FOPDT models, and they are routinely operated with Bang-Bang
+control during commissioning before a more sophisticated controller is
+installed.
+The KZV allows this commissioning phase itself to be used for parameter
+identification, shortening start-up time.
+
+\subsection{Contributions}
+\label{sec:contributions}
+
+The main contributions of this work are:
+\begin{enumerate}
+    \item A closed-form derivation of FOPDT parameters from Bang-Bang limit
+          cycle measurements (\cref{sec:theory}).
+    \item Modified IMC-based PID tuning formulas adapted to the KZV
+          identification (\cref{sec:methodology}).
+    \item Simulation validation on a second-order thermal plant with dead time,
+          representative of industrial cooling applications (\cref{sec:results}).
+    \item A discussion of robustness to measurement noise and model mismatch
+          (\cref{sec:discussion}).
+\end{enumerate}
+
+\subsection{Paper Organisation}
+
+\Cref{sec:theory} reviews the theoretical foundations: describing function
+analysis of Bang-Bang control and FOPDT modelling.
+\Cref{sec:methodology} details the step-by-step KZV procedure.
+\Cref{sec:results} presents simulation results.
+\Cref{sec:discussion} discusses limitations and future work.
+\Cref{sec:conclusion} concludes the paper.

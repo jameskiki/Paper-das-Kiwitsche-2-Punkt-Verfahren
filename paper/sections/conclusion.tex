@@ -1,0 +1,42 @@
+\section{Conclusion}
+\label{sec:conclusion}
+
+This paper has presented the \emph{Kiwitsche 2-Punkt-Verfahren} (KZV), a
+practical procedure for estimating optimal PID control parameters using
+Bang-Bang control as a starting point.
+
+The method exploits the stationary limit-cycle oscillation that a Bang-Bang
+controller naturally produces on a stable plant.
+Using describing function analysis, three FOPDT model parameters (gain,
+time constant, dead time) are identified from the measured oscillation period
+$\Tu$, amplitude $\Au$, and the known relay switching levels.
+These parameters are then fed into IMC-based PID tuning formulas to obtain
+$\Kp$, $\Ti$, and $\Td$.
+
+Simulation results on the benchmark FOPDT plant (\cref{sec:results})
+demonstrate that KZV-IMC achieves zero overshoot and an IAE within \SI{3}{\percent}
+of the theoretically optimal IMC controller, while Ziegler--Nichols tuning
+yields \SI{57.8}{\percent} overshoot and more than twice the IAE.
+
+The main advantages of the KZV over classical methods are:
+\begin{itemize}
+    \item \textbf{No additional experiment needed}: the Bang-Bang phase
+          already present during commissioning is sufficient.
+    \item \textbf{Dead-time estimation}: unlike basic ZN relay feedback,
+          the KZV provides a separate estimate of dead time, enabling
+          more robust IMC-style tuning.
+    \item \textbf{Simple implementation}: all computations involve closed-form
+          expressions and can be executed on standard PLC hardware.
+\end{itemize}
+
+\subsection*{Future Work}
+
+Open directions include:
+\begin{itemize}
+    \item Experimental validation on a physical cooling test bench.
+    \item Extension to second-order identification using multi-frequency
+          relay tests.
+    \item Online (recursive) adaptation of the PID parameters as the plant
+          ages or operating conditions change.
+    \item Integration with auto-tuning firmware for industrial controllers.
+\end{itemize}

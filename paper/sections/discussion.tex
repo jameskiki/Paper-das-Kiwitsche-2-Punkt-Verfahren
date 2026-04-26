@@ -1,0 +1,77 @@
+\section{Discussion}
+\label{sec:discussion}
+
+\subsection{Accuracy of the Identification}
+\label{sec:disc:accuracy}
+
+The describing function approximation used in \cref{sec:theory:df} assumes
+that the plant sufficiently attenuates higher harmonics of the relay switching
+signal, so that the fundamental frequency component dominates.
+This assumption holds well for plants with a roll-off of at least
+\SI{-40}{\decibel\per decade} above $\omega_u$.
+For thermal processes (which typically roll off much more steeply), the
+approximation is highly accurate.
+
+For plants with resonances near $\omega_u$, the describing function prediction
+can be less accurate.
+In such cases, it is recommended to add a low-pass filter in series with the
+measurement before computing $\Au$ and $\Tu$.
+
+\subsection{Robustness to Measurement Noise}
+\label{sec:disc:noise}
+
+Measurement noise directly affects the accuracy of $\Au$ and, more critically,
+the switching instants used to compute $\Tu$.
+A practical mitigation strategy is to:
+\begin{enumerate}
+    \item Use an adequate hysteresis $d \gg \sigma_n$, where $\sigma_n$ is
+          the standard deviation of the measurement noise.
+    \item Average over at least five oscillation cycles (as prescribed in
+          \cref{sec:method:phase2}).
+    \item Apply a moving-average pre-filter with window length
+          $w = \Tu / 10$ before detecting zero-crossings.
+\end{enumerate}
+
+\subsection{Extension to SOPDT Plants}
+\label{sec:disc:sopdt}
+
+The FOPDT identification described in this paper is intentionally conservative:
+it maps any higher-order plant onto a simple FOPDT model.
+For plants where a second time constant is significant (such as
+\cref{eq:plant}), the estimated dead time $\hat{L}$ absorbs part of the
+lag contributed by $T_2$, leading to a slightly conservative (i.e.\
+detuned) PID.
+This is generally desirable for robust industrial control.
+An extension using a second-order relay feedback test~\cite{Wang1999}
+is left for future work.
+
+\subsection{Limitations}
+\label{sec:disc:limitations}
+
+\begin{itemize}
+    \item The procedure requires the plant to be stable and to sustain a
+          limit cycle under Bang-Bang control.
+          Integrating or unstable plants require a modified relay feedback
+          scheme.
+    \item Nonlinear plant behaviour (e.g.\ hysteresis, saturation) may cause
+          the limit cycle to be asymmetric, leading to biased estimates.
+    \item The method is derived for SISO systems. Multi-variable extensions
+          are not considered here.
+\end{itemize}
+
+\subsection{Comparison with Related Methods}
+\label{sec:disc:related}
+
+The KZV is most closely related to the relay feedback tuning method of
+\AA{}str\"om and H\"agglund~\cite{Astrom1984}, which also uses a relay
+(Bang-Bang without hysteresis) to excite the ultimate oscillation.
+The key differences are:
+\begin{enumerate}
+    \item KZV accounts for the hysteresis of the real relay, improving
+          accuracy when $d / A$ is non-negligible.
+    \item KZV extracts the dead time $L$ in addition to $\Ku$ and $\Tu$,
+          enabling IMC-based (rather than ZN-based) PID synthesis.
+    \item KZV is designed to use the Bang-Bang controller that is already
+          present in the system, requiring no additional hardware or software
+          mode.
+\end{enumerate}

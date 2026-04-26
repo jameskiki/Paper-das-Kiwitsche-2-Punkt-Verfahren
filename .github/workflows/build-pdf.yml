@@ -1,0 +1,70 @@
+name: Build and Release PDF
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install TeX Live
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            texlive-latex-base \
+            texlive-latex-recommended \
+            texlive-latex-extra \
+            texlive-fonts-recommended \
+            texlive-science \
+            texlive-pictures \
+            cm-super
+
+      - name: Compile LaTeX paper (two passes for TOC/references)
+        run: |
+          pdflatex -interaction=nonstopmode paper.tex
+          pdflatex -interaction=nonstopmode paper.tex
+
+      - name: Upload PDF as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: paper-pdf
+          path: paper.pdf
+          if-no-files-found: error
+
+  release:
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download compiled PDF
+        uses: actions/download-artifact@v4
+        with:
+          name: paper-pdf
+
+      - name: Create or update release with PDF
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: "Latest Paper PDF"
+          body: |
+            Automatically generated PDF of the paper
+            **Das Kiwitsche 2-Punkt-Verfahren** – Using Bang-Bang Control to Estimate Optimal PID Parameters.
+          files: paper.pdf
+          make_latest: true

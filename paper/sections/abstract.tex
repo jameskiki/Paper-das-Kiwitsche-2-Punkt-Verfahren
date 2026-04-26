@@ -1,0 +1,23 @@
+This paper presents the \emph{Kiwitsche 2-Punkt-Verfahren}, a systematic
+procedure for estimating optimal PID control parameters for complex industrial
+processes.
+The method leverages Bang-Bang (two-point) control to excite the plant into a
+reproducible limit-cycle oscillation.
+From this oscillation, key process characteristics --- namely the ultimate
+period~$\Tu$ and the oscillation amplitude~$\Au$ --- are extracted and used to
+derive an equivalent First-Order-Plus-Dead-Time (FOPDT) model.
+Modified tuning formulas, rooted in Internal Model Control (IMC) theory, then
+translate the FOPDT model into proportional, integral, and derivative
+gains~$(\Kp, \Ti, \Td)$.
+
+The procedure requires no \textit{a priori} plant knowledge and is
+non-invasive: the Bang-Bang excitation already represents a natural operating
+mode for many industrial systems such as cooling and heating plants.
+Simulation studies on a second-order plant with dead time demonstrate that the
+proposed method achieves comparable or superior closed-loop performance relative
+to classical Ziegler--Nichols tuning while reducing commissioning effort.
+
+\medskip
+\noindent\textbf{Keywords:} PID tuning, Bang-Bang control, two-point control,
+parameter estimation, FOPDT identification, limit cycle, industrial cooling,
+IMC.

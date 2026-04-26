@@ -1,0 +1,130 @@
+\section{Theoretical Background}
+\label{sec:theory}
+
+\subsection{Bang-Bang Control and Limit Cycles}
+\label{sec:theory:bangbang}
+
+A Bang-Bang (two-point) controller with hysteresis~$d$ generates the
+manipulated variable signal
+\begin{equation}
+    u(t) =
+    \begin{cases}
+        U_{\max} & \text{if } e(t) > +d, \\
+        U_{\min} & \text{if } e(t) < -d, \\
+        u(t^-)   & \text{otherwise},
+    \end{cases}
+    \label{eq:bangbang}
+\end{equation}
+where $e(t) = r - y(t)$ is the control error, $r$ is the setpoint, $y(t)$ is
+the plant output, and $u(t^-)$ denotes the previous value (memory).
+
+For a stable plant $G(s)$ with sufficient gain and phase delay, the closed
+loop with the Bang-Bang controller converges to a periodic
+\emph{limit-cycle oscillation}~\cite{Atherton1975}.
+Let $\Tu$ be the oscillation period and $\Au$ the peak-to-peak amplitude of
+$y(t)$ in steady limit-cycle operation.
+
+\subsection{Describing Function Analysis}
+\label{sec:theory:df}
+
+The describing function (DF) of a relay with hysteresis~$d$ and amplitude~$M$
+(where $M = (U_{\max} - U_{\min})/2$) is~\cite{Atherton1982}
+
+\begin{equation}
+    N(A) = \frac{4M}{\pi A}
+           \left( \sqrt{1 - \left(\frac{d}{A}\right)^2}
+                  - j \frac{d}{A} \right),
+    \quad A > d,
+    \label{eq:df}
+\end{equation}
+where $A = \Au/2$ is the single-sided oscillation amplitude of the output.
+
+The limit-cycle frequency~$\omega_u = 2\pi/\Tu$ satisfies the harmonic balance
+condition
+\begin{equation}
+    G(j\omega_u) = -\frac{1}{N(A)}.
+    \label{eq:hb}
+\end{equation}
+
+For the special case of zero hysteresis ($d = 0$), \cref{eq:df} reduces to
+the ideal relay describing function $N(A) = 4M/(\pi A)$, and
+\cref{eq:hb} becomes equivalent to the Ziegler--Nichols ultimate gain
+condition $|G(j\omega_u)| = \pi A / (4M)$.
+
+\subsection{FOPDT Plant Model}
+\label{sec:theory:fopdt}
+
+The First-Order-Plus-Dead-Time (FOPDT) transfer function
+\begin{equation}
+    G(s) = \frac{K e^{-Ls}}{Ts + 1}
+    \label{eq:fopdt}
+\end{equation}
+is a standard approximation for a large class of industrial processes.
+It is characterised by three parameters: process gain~$K$, time
+constant~$T$, and dead time~$L$.
+
+\subsubsection{Parameter Identification from Limit Cycle}
+
+Evaluating \cref{eq:fopdt} at $s = j\omega_u$ gives
+\begin{align}
+    |G(j\omega_u)| &= \frac{K}{\sqrt{1 + (\omega_u T)^2}},
+    \label{eq:gain_cond} \\
+    \angle G(j\omega_u) &= -\arctan(\omega_u T) - \omega_u L = -\pi.
+    \label{eq:phase_cond}
+\end{align}
+
+The describing function provides two equations (gain and phase of
+$-1/N(A)$):
+\begin{align}
+    |G(j\omega_u)| &= \frac{\pi A}{4M}
+                      \frac{1}{\sqrt{1 - (d/A)^2}},
+    \label{eq:gain_from_df} \\
+    \angle G(j\omega_u) &= -\pi + \arcsin\!\left(\frac{d}{A}\right).
+    \label{eq:phase_from_df}
+\end{align}
+
+Combining \cref{eq:phase_cond,eq:phase_from_df} yields
+\begin{equation}
+    \arctan(\omega_u T) + \omega_u L
+    = \pi - \arcsin\!\left(\frac{d}{A}\right).
+    \label{eq:phase_id}
+\end{equation}
+
+With $\omega_u$ known from the measured period $\Tu$, \cref{eq:gain_cond,eq:gain_from_df,eq:phase_id}
+form a system that can be solved for $K$, $T$, and $L$ if one additional
+assumption is introduced.
+A common engineering choice is to adopt the ratio $L/T$ from a
+characteristic of the oscillation waveform (e.g., the symmetry of the
+on/off intervals) or to set $L = \Tu/(2\pi) \cdot \phi_L$ based on the
+phase margin~\cite{Seborg2011}.
+
+\begin{remark}
+    For processes where the FOPDT approximation is poor (e.g., resonant
+    systems), higher-order describing function methods or relay feedback
+    with filtered output should be considered.
+\end{remark}
+
+\subsection{IMC-Based PID Tuning}
+\label{sec:theory:imc}
+
+Given the FOPDT model~\eqref{eq:fopdt}, the IMC-PID tuning
+rules~\cite{Rivera1986} yield
+
+\begin{align}
+    \Kp &= \frac{1}{K} \cdot \frac{T}{\lambda + L}, \label{eq:Kp} \\
+    \Ti  &= T,                                         \label{eq:Ti} \\
+    \Td  &= \frac{L}{2},                               \label{eq:Td}
+\end{align}
+where $\lambda > 0$ is the desired closed-loop time constant and serves as a
+robustness tuning knob: larger $\lambda$ gives a more sluggish but more
+robust response.
+
+A recommended default is $\lambda = L$ (i.e., equal to the estimated dead
+time), which provides a good trade-off between speed and robustness for
+typical industrial processes.
+
+\begin{remark}
+    The modified ZN formulas for FOPDT (see, e.g.,~\cite{Aastrom2006}) are
+    an alternative and are compared against the IMC rules in
+    \cref{sec:results}.
+\end{remark}

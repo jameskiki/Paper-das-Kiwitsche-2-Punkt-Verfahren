@@ -1,0 +1,75 @@
+\documentclass[12pt, a4paper]{article}
+
+% ─── Packages ────────────────────────────────────────────────────────────────
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{lmodern}
+
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{graphicx}
+\usepackage[labelfont=bf]{caption}
+\usepackage{subcaption}
+\usepackage{booktabs}
+\usepackage{siunitx}
+\usepackage{hyperref}
+\usepackage{cleveref}
+\usepackage{cite}
+\usepackage{geometry}
+\usepackage{setspace}
+\usepackage{float}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+
+\geometry{margin=2.5cm}
+\onehalfspacing
+
+% ─── Theorem environments ────────────────────────────────────────────────────
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{definition}{Definition}[section]
+\newtheorem{remark}{Remark}[section]
+
+% ─── Custom commands ─────────────────────────────────────────────────────────
+\newcommand{\Kp}{K_{\mathrm{p}}}
+\newcommand{\Ti}{T_{\mathrm{i}}}
+\newcommand{\Td}{T_{\mathrm{d}}}
+\newcommand{\Tu}{T_{\mathrm{u}}}
+\newcommand{\Au}{A_{\mathrm{u}}}
+\newcommand{\Ku}{K_{\mathrm{u}}}
+
+% ─── Metadata ────────────────────────────────────────────────────────────────
+\title{Das Kiwitsche 2-Punkt-Verfahren:\\
+       Bang-Bang Control as a Starting Point for\\
+       Optimal PID Parameter Estimation}
+
+\author{[Author Names to be determined]}
+
+\date{\today}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+\input{sections/abstract}
+\end{abstract}
+
+\tableofcontents
+\listoffigures
+
+\newpage
+
+\input{sections/introduction}
+\input{sections/theory}
+\input{sections/methodology}
+\input{sections/results}
+\input{sections/discussion}
+\input{sections/conclusion}
+
+\bibliographystyle{ieeetr}
+\bibliography{bibliography}
+
+\end{document}

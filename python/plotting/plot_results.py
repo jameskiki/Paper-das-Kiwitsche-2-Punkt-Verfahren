@@ -58,6 +58,55 @@ plt.rcParams.update({
 })
 
 
+class NonlinearFOPDTPlant:
+    """Synthetic nonlinear FOPDT-like plant for preview figures.
+
+    This keeps the same structure as a delayed first-order plant, but lets
+    process gain and time constant vary smoothly with operating point.
+    """
+
+    def __init__(
+        self,
+        K0: float,
+        T0: float,
+        L: float,
+        dt: float = 0.1,
+        y0: float = 0.0,
+        y_ref: float = 20.0,
+        gain_slope: float = -0.015,
+        tau_slope: float = 0.02,
+    ) -> None:
+        self.K0 = K0
+        self.T0 = T0
+        self.L = L
+        self.dt = dt
+        self.y = y0
+        self.y_ref = y_ref
+        self.gain_slope = gain_slope
+        self.tau_slope = tau_slope
+
+        self._delay_steps = max(1, int(round(L / dt)))
+        self._u_buffer: list[float] = [0.0] * self._delay_steps
+
+    def _K_eff(self) -> float:
+        y_norm = (self.y - self.y_ref) / max(abs(self.y_ref), 1.0)
+        return max(0.05, self.K0 * (1.0 + self.gain_slope * y_norm * 10.0))
+
+    def _T_eff(self) -> float:
+        y_norm = (self.y - self.y_ref) / max(abs(self.y_ref), 1.0)
+        return max(5.0, self.T0 * (1.0 + self.tau_slope * y_norm * 10.0))
+
+    def step(self, u: float) -> float:
+        u_delayed = self._u_buffer.pop(0)
+        self._u_buffer.append(u)
+
+        k_eff = self._K_eff()
+        t_eff = self._T_eff()
+        dydt = (k_eff * u_delayed - self.y) / t_eff
+        self.y += dydt * self.dt
+        return self.y
+
+
 # ─── Helper ───────────────────────────────────────────────────────────────────
 
 def _save(fig: plt.Figure, name: str) -> None:
@@ -187,6 +236,123 @@ def plot_step_response_comparison(fopdt_params: dict) -> None:
         print(f"{lbl:<22} {m['Overshoot (%)']:>15.1f} {m['Settling time (s)']:>13.1f} {m['IAE']:>12.1f}")
 
 
+def _run_setpoint_identification(
+    setpoint: float,
+    nonlinear: bool,
+    t_end: float,
+) -> dict[str, float] | None:
+    if nonlinear:
+        plant = NonlinearFOPDTPlant(
+            K0=PLANT_K,
+            T0=PLANT_T,
+            L=PLANT_L,
+            dt=DT,
+            y0=setpoint,
+            y_ref=SETPOINT,
+        )
+    else:
+        plant = FOPDTPlant(K=PLANT_K, T=PLANT_T, L=PLANT_L, dt=DT, y0=setpoint)
+
+    ctrl = BangBangController(u_max=BB_U_MAX, u_min=BB_U_MIN, d=BB_D)
+    t, y, u = simulate_bang_bang(plant, ctrl, setpoint, t_end=t_end, dt=DT)
+    e = setpoint - y
+
+    try:
+        chars = extract_limit_cycle_characteristics(t, y, e, n_cycles=5)
+        fopdt = identify_fopdt_from_transients(
+            t=t,
+            y=y,
+            u=u,
+            dt=DT,
+            u_min=BB_U_MIN,
+            u_max=BB_U_MAX,
+            n_last=5,
+        )
+        fopdt.update({"setpoint": setpoint, "T_u": chars["T_u"], "A_u": chars["A_u"]})
+        return fopdt
+    except ValueError:
+        return None
+
+
+def plot_setpoint_sweep_preview() -> None:
+    """Preview how linear vs nonlinear plants look under setpoint sweeps."""
+    setpoints = np.array([15.0, 20.0, 25.0, 30.0])
+
+    linear_estimates: list[dict[str, float]] = []
+    nonlinear_estimates: list[dict[str, float]] = []
+
+    fig_lc, axes_lc = plt.subplots(2, 2, figsize=(10, 6), sharex=True)
+    axes_flat = axes_lc.flatten()
+
+    for idx, sp in enumerate(setpoints):
+        plant_nl = NonlinearFOPDTPlant(
+            K0=PLANT_K,
+            T0=PLANT_T,
+            L=PLANT_L,
+            dt=DT,
+            y0=sp,
+            y_ref=SETPOINT,
+        )
+        ctrl_nl = BangBangController(u_max=BB_U_MAX, u_min=BB_U_MIN, d=BB_D)
+        t_nl, y_nl, _ = simulate_bang_bang(plant_nl, ctrl_nl, sp, t_end=3000.0, dt=DT)
+
+        mask = t_nl >= (t_nl[-1] - 700.0)
+        ax = axes_flat[idx]
+        ax.plot(t_nl[mask], y_nl[mask], color="firebrick", label="Nonlinear")
+        ax.axhline(sp, color="gray", linestyle="--", linewidth=0.8)
+        ax.set_title(f"Setpoint {sp:.0f} °C")
+        ax.set_ylabel("y (°C)")
+        ax.grid(alpha=0.2)
+
+        lin = _run_setpoint_identification(sp, nonlinear=False, t_end=3000.0)
+        nl = _run_setpoint_identification(sp, nonlinear=True, t_end=3000.0)
+        if lin is not None:
+            linear_estimates.append(lin)
+        if nl is not None:
+            nonlinear_estimates.append(nl)
+
+    for ax in axes_lc[-1, :]:
+        ax.set_xlabel("Time (s)")
+    fig_lc.suptitle("Limit-Cycle Preview for a Setpoint Sweep (Nonlinear Plant)")
+    fig_lc.tight_layout()
+    _save(fig_lc, "setpoint_sweep_limit_cycles_preview.pdf")
+
+    if not linear_estimates or not nonlinear_estimates:
+        print("Setpoint sweep preview skipped: not enough valid estimates.")
+        return
+
+    sp_lin = np.array([dct["setpoint"] for dct in linear_estimates])
+    sp_nl = np.array([dct["setpoint"] for dct in nonlinear_estimates])
+
+    fig, axes = plt.subplots(3, 1, figsize=(8, 8), sharex=True)
+    params = ["K", "T", "L"]
+    ylabels = ["Estimated K", "Estimated T (s)", "Estimated L (s)"]
+
+    for i, (p, ylabel) in enumerate(zip(params, ylabels)):
+        axes[i].plot(
+            sp_lin,
+            [dct[p] for dct in linear_estimates],
+            "o-",
+            color="steelblue",
+            label="Linear benchmark",
+        )
+        axes[i].plot(
+            sp_nl,
+            [dct[p] for dct in nonlinear_estimates],
+            "s-",
+            color="firebrick",
+            label="Synthetic nonlinear",
+        )
+        axes[i].set_ylabel(ylabel)
+        axes[i].grid(alpha=0.25)
+
+    axes[0].legend(loc="best")
+    axes[-1].set_xlabel("Setpoint (°C)")
+    fig.suptitle("Identified FOPDT Parameters vs Setpoint")
+    fig.tight_layout()
+    _save(fig, "setpoint_sweep_identification_preview.pdf")
+
+
 # ─── Main ─────────────────────────────────────────────────────────────────────
 
 def main() -> None:
@@ -233,6 +399,9 @@ def main() -> None:
 
     print("\nGenerating Figure 2: Step response comparison …")
     plot_step_response_comparison(fopdt_params)
+
+    print("\nGenerating preview: setpoint sweep nonlinearity figures …")
+    plot_setpoint_sweep_preview()
 
     print("\nAll figures saved to paper/figures/")
 

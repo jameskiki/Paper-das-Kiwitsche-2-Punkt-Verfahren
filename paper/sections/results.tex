@@ -31,14 +31,14 @@ settled into stationary oscillation.
 The measured characteristics, averaged over the last five complete cycles, are
 $\Tu = \SI{82.6}{\second}$ and $\Au = \SI{8.29}{\degreeCelsius}$.
 
-\begin{figure}[H]
+\begin{figure*}[t]
     \centering
-    \includegraphics[width=0.85\linewidth]{figures/limit_cycle.pdf}
+    \includegraphics[width=0.92\linewidth]{figures/limit_cycle.pdf}
     \caption{Stationary limit-cycle oscillation under Bang-Bang control.
              Top: controlled variable $y(t)$ and setpoint $r$.
              Bottom: manipulated variable $u(t)$.}
     \label{fig:limit_cycle}
-\end{figure}
+\end{figure*}
 
 \subsection{Identified FOPDT Parameters}
 \label{sec:results:ident}
@@ -47,7 +47,7 @@ The KZV identification procedure (\cref{sec:method:phase3}) yields the
 parameter estimates shown in \cref{tab:ident}, compared against the true
 plant values.
 
-\begin{table}[H]
+\begin{table}[t]
     \centering
     \caption{Identified vs.\ true FOPDT parameters.}
     \label{tab:ident}
@@ -81,18 +81,18 @@ configurations:
                                — serves as an upper-bound reference.
 \end{enumerate}
 
-\begin{figure}[H]
+\begin{figure*}[t]
     \centering
-    \includegraphics[width=0.85\linewidth]{figures/step_response_comparison.pdf}
+    \includegraphics[width=0.92\linewidth]{figures/step_response_comparison.pdf}
     \caption{Closed-loop step responses for three PID configurations.
              Setpoint step of $\Delta r = \SI{5}{\degreeCelsius}$ at $t=0$.
              Dashed band indicates $\pm 5\%$ settling criterion.}
     \label{fig:step_response}
-\end{figure}
+\end{figure*}
 
 Key performance metrics are summarised in \cref{tab:perf}.
 
-\begin{table}[H]
+\begin{table}[t]
     \centering
     \caption{Closed-loop performance metrics for a
              $\Delta r = \SI{5}{\degreeCelsius}$ step.}
@@ -101,18 +101,20 @@ Key performance metrics are summarised in \cref{tab:perf}.
         \toprule
         Metric & {KZV-IMC} & {ZN} & {Ideal IMC} \\
         \midrule
-        Overshoot (\%)                 & 0.0  & 57.8 & 0.0  \\
-        Settling time (\si{\second})   & 287  & {---} & 291  \\
-        IAE (\si{\degreeCelsius\second}) & 844  & 1867  & 869 \\
+        Overshoot (\%)                 & 5.5  & 57.9 & 5.4  \\
+        Settling time (\si{\second})   & 76   & {---} & 79  \\
+        IAE (\si{\degreeCelsius\second}) & 228  & 1834  & 232 \\
         \bottomrule
     \end{tabular}
 \end{table}
 
-The KZV-IMC controller achieves zero overshoot and an IAE of
-\SI{844}{\degreeCelsius\second}, which is within \SI{3}{\percent} of the
-ideal IMC result.
-The ZN controller exhibits \SI{57.8}{\percent} overshoot and an IAE more
-than twice as large.
+The KZV-IMC controller achieves \SI{5.5}{\percent} overshoot and an IAE of
+\SI{228}{\degreeCelsius\second}, which is within \SI{2}{\percent} of the
+ideal IMC result (\SI{232}{\degreeCelsius\second}).
+Settling time to within $\pm 5\,\%$ of the target is \SI{76}{\second},
+compared to \SI{79}{\second} for ideal IMC.
+The ZN controller exhibits \SI{57.9}{\percent} overshoot and an IAE more
+than eight times as large.
 The ZN controller does not settle within the simulation horizon of
 \SI{1200}{\second}, confirming the well-known aggressive nature of
 Ziegler--Nichols tuning.

@@ -5,12 +5,36 @@ The Kiwitsche 2-Punkt-Verfahren (KZV) consists of four sequential phases,
 described below.
 An overview is shown in \cref{fig:kzv_flowchart}.
 
-% \begin{figure}[H]
-%     \centering
-%     \includegraphics[width=0.7\linewidth]{figures/kzv_flowchart.pdf}
-%     \caption{Flow chart of the Kiwitsche 2-Punkt-Verfahren.}
-%     \label{fig:kzv_flowchart}
-% \end{figure}
+\begin{figure}[htbp]
+    \centering
+    \begin{tikzpicture}[
+        >=Stealth,
+        phase/.style={draw, rounded corners=4pt, fill=blue!8,
+                      minimum width=3.2cm, minimum height=0.9cm,
+                      align=center, font=\small},
+        arrow/.style={->, thick},
+        label/.style={font=\scriptsize, text=gray, align=left},
+        node distance=0.45cm,
+    ]
+        \node[phase] (p1) {\textbf{Phase 1}\\Bang-Bang excitation};
+        \node[phase, below=of p1] (p2) {\textbf{Phase 2}\\Extract $\Tu$, $\Au$};
+        \node[phase, below=of p2] (p3) {\textbf{Phase 3}\\Identify $\hat K$, $\hat T$, $\hat L$};
+        \node[phase, below=of p3] (p4) {\textbf{Phase 4}\\IMC-PID synthesis};
+        \node[phase, below=of p4, fill=green!10] (sw) {Switch to PID control};
+
+        \draw[arrow] (p1) -- (p2);
+        \draw[arrow] (p2) -- (p3);
+        \draw[arrow] (p3) -- (p4);
+        \draw[arrow] (p4) -- (sw);
+
+        \node[label, right=0.5cm of p1] {Enable BB, wait\\for stationary cycle};
+        \node[label, right=0.5cm of p2] {Average over\\$N_{\min}=5$ cycles};
+        \node[label, right=0.5cm of p3] {Slope-based $\hat{L}$, $\hat{T}$, $\hat{K}$};
+        \node[label, right=0.5cm of p4] {$\lambda = \hat L$};
+    \end{tikzpicture}
+    \caption{Flow chart of the Kiwitsche 2-Punkt-Verfahren (KZV).}
+    \label{fig:kzv_flowchart}
+\end{figure}
 
 \subsection{Phase 1: Bang-Bang Excitation}
 \label{sec:method:phase1}
@@ -32,12 +56,13 @@ An overview is shown in \cref{fig:kzv_flowchart}.
 \subsection{Phase 2: Characteristic Extraction}
 \label{sec:method:phase2}
 
-Once a stationary limit cycle is established, record $N_{\min} = 5$
-consecutive oscillation cycles and compute:
+Once a stationary limit cycle is established, let $N \geq N_{\min}$ be the
+number of recorded cycles, with $N_{\min} = 5$.
+Record $N$ consecutive oscillation cycles and compute:
 
 \begin{align}
-    \Tu &= \frac{1}{N} \sum_{k=1}^{N} (t_{k+1} - t_k), \label{eq:Tu_est} \\
-    \Au &= \frac{1}{N} \sum_{k=1}^{N} \bigl(y_{\max,k} - y_{\min,k}\bigr), \label{eq:Au_est}
+    \Tu &= \frac{1}{N_{\min}} \sum_{k=1}^{N_{\min}} (t_{k+1} - t_k), \label{eq:Tu_est} \\
+    \Au &= \frac{1}{N_{\min}} \sum_{k=1}^{N_{\min}} \bigl(y_{\max,k} - y_{\min,k}\bigr), \label{eq:Au_est}
 \end{align}
 where $t_k$ are the times of successive positive zero-crossings of $e(t)$,
 and $y_{\max,k}$, $y_{\min,k}$ are the maximum and minimum of $y(t)$ within
@@ -48,6 +73,9 @@ each cycle.
 
 Using the measured quantities $(\Tu, \Au, d, M)$ and the recorded time
 series $(t, y, u)$, the FOPDT parameters are estimated as follows.
+The three estimates must be computed in the strict order
+$\hat{L} \to \hat{T} \to \hat{K}$: $\hat{T}$ depends on $\hat{L}$, and
+$\hat{K}$ depends on $\hat{T}$.
 
 \paragraph{Dead-time estimate.}
 For a FOPDT plant under Bang-Bang control, the output slope $\dot{y}(t)$

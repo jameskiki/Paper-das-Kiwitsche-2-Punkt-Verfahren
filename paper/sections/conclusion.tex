@@ -14,9 +14,16 @@ These parameters are then fed into IMC-based PID tuning formulas to obtain
 $\Kp$, $\Ti$, and $\Td$.
 
 Simulation results on the benchmark FOPDT plant (\cref{sec:results})
-demonstrate that KZV-IMC achieves zero overshoot and an IAE within \SI{3}{\percent}
-of the theoretically optimal IMC controller, while Ziegler--Nichols tuning
-yields \SI{57.8}{\percent} overshoot and more than twice the IAE.
+demonstrate that KZV-IMC achieves \SI{5.5}{\percent} overshoot and an IAE
+within \SI{2}{\percent} of the theoretically optimal IMC controller, while
+Ziegler--Nichols tuning yields \SI{57.9}{\percent} overshoot and more than
+eight times the IAE.
+
+\Cref{sec:nonlinear} extends the analysis to a nonlinear FOPDT-like plant.
+The KZV is shown to accurately recover the local linearisation at each
+operating point, enabling a simple gain-scheduling strategy: one additional
+Bang-Bang experiment at any new setpoint is sufficient to retune the PID
+optimally without requiring an explicit nonlinear plant model.
 
 The main advantages of the KZV over classical methods are:
 \begin{itemize}

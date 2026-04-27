@@ -18,11 +18,42 @@ manipulated variable signal
 where $e(t) = r - y(t)$ is the control error, $r$ is the setpoint, $y(t)$ is
 the plant output, and $u(t^-)$ denotes the previous value (memory).
 
-For a stable plant $G(s)$ with sufficient gain and phase delay, the closed
-loop with the Bang-Bang controller converges to a periodic
-\emph{limit-cycle oscillation}~\cite{Atherton1975}.
+\Cref{fig:block_closed_loop} illustrates the closed-loop structure.
+For a stable plant $G(s)$ with sufficient gain and phase delay, this loop
+converges to a periodic \emph{limit-cycle oscillation}~\cite{Atherton1975}.
 Let $\Tu$ be the oscillation period and $\Au$ the peak-to-peak amplitude of
 $y(t)$ in steady limit-cycle operation.
+
+\begin{figure}[htbp]
+    \centering
+    \begin{tikzpicture}[
+        >=Stealth, auto,
+        block/.style={draw, rectangle, minimum height=0.75cm,
+                      minimum width=1.5cm, align=center, font=\small},
+        sum/.style={draw, circle, inner sep=2pt, font=\small},
+        node distance=0.5cm and 1.0cm,
+    ]
+        \node[sum]                          (sum)  {$\Sigma$};
+        \node[block, right=1.2cm of sum]    (bb)   {Bang-Bang\\[-2pt]$d,\,U_{\min},U_{\max}$};
+        \node[block, right=1.2cm of bb]     (plant){$G(s)$};
+        \coordinate[right=0.9cm of plant]   (yjunc);
+        \coordinate[below=0.7cm of yjunc]   (fb);
+        \coordinate[below=0.7cm of sum]     (fbsum);
+
+        \draw[->] ++(-1.2,0) node[left]{$r$} -- node[above,font=\small]{} (sum);
+        \draw[->] (sum) -- node[above,font=\small]{$e$} (bb);
+        \draw[->] (bb)  -- node[above,font=\small]{$u$} (plant);
+        \draw[->] (plant) -- node[above,font=\small]{$y$} (yjunc)
+                           -- ++(0.5,0) node[right,font=\small]{$y$};
+        \draw[-]  (yjunc) -- (fb) -- (fbsum);
+        \draw[->] (fbsum) -- (sum.south);
+        \node[below left=1pt and 1pt of sum, font=\small]{$-$};
+    \end{tikzpicture}
+    \caption{Closed-loop block diagram: Bang-Bang controller drives the plant
+             $G(s)$ into a sustained limit-cycle oscillation around the
+             setpoint~$r$.}
+    \label{fig:block_closed_loop}
+\end{figure}
 
 \subsection{Describing Function Analysis}
 \label{sec:theory:df}
@@ -62,6 +93,28 @@ The First-Order-Plus-Dead-Time (FOPDT) transfer function
 is a standard approximation for a large class of industrial processes.
 It is characterised by three parameters: process gain~$K$, time
 constant~$T$, and dead time~$L$.
+\Cref{fig:fopdt_block} shows the internal structure of this model.
+
+\begin{figure}[htbp]
+    \centering
+    \begin{tikzpicture}[
+        >=Stealth, auto,
+        block/.style={draw, rectangle, minimum height=0.75cm,
+                      minimum width=1.7cm, align=center, font=\small},
+        node distance=0.4cm and 1.0cm,
+    ]
+        \node[block] (delay) {$e^{-Ls}$};
+        \node[block, right=1.2cm of delay] (fo) {$\dfrac{K}{Ts+1}$};
+
+        \draw[->] ++(-1.5,0) node[left,font=\small]{$u(t)$} -- (delay);
+        \draw[->] (delay) -- (fo);
+        \draw[->] (fo) -- ++(1.5,0) node[right,font=\small]{$y(t)$};
+    \end{tikzpicture}
+    \caption{Internal block diagram of the FOPDT model~\eqref{eq:fopdt}:
+             the dead-time element delays the input, which then drives a
+             first-order lag with gain~$K$ and time constant~$T$.}
+    \label{fig:fopdt_block}
+\end{figure}
 
 \subsubsection{Parameter Identification from Limit Cycle}
 
@@ -104,6 +157,17 @@ phase margin~\cite{Seborg2011}.
     with filtered output should be considered.
 \end{remark}
 
+\begin{remark}
+    While \cref{eq:gain_cond,eq:gain_from_df,eq:phase_id} characterise the
+    limit cycle and guarantee the existence and uniqueness of the FOPDT
+    parameters $K$, $T$, $L$, the KZV does not solve this nonlinear system
+    directly. Instead, Phase~3 (\cref{sec:method:phase3}) employs a
+    transient-slope method to identify $\hat{L}$, $\hat{T}$, $\hat{K}$
+    sequentially from the time-domain signal. This approach is more robust
+    in practice because it avoids the numerical sensitivity of the nonlinear
+    DF system while remaining theoretically justified by the DF equations.
+\end{remark}
+
 \subsection{IMC-Based PID Tuning}
 \label{sec:theory:imc}
 
@@ -120,8 +184,10 @@ robustness tuning knob: larger $\lambda$ gives a more sluggish but more
 robust response.
 
 A recommended default is $\lambda = L$ (i.e., equal to the estimated dead
-time), which provides a good trade-off between speed and robustness for
-typical industrial processes.
+time). This choice, consistent with the guideline $\lambda \geq 0.5L$
+recommended in~\cite{Rivera1986}, provides a closed-loop bandwidth
+approximately equal to the reciprocal of twice the dead time, yielding a
+good trade-off between speed and robustness for typical industrial processes.
 
 \begin{remark}
     The modified ZN formulas for FOPDT (see, e.g.,~\cite{Aastrom2006}) are

@@ -31,6 +31,7 @@ The method is especially suited for:
 │   │   ├── theory.tex
 │   │   ├── methodology.tex
 │   │   ├── results.tex
+│   │   ├── nonlinear_extension.tex
 │   │   ├── discussion.tex
 │   │   └── conclusion.tex
 │   └── figures/             # Generated figures (output of Python scripts)
@@ -86,7 +87,7 @@ The *Kiwitsche 2-Punkt-Verfahren* proceeds in four steps:
 1. **Bang-Bang Excitation** — Apply two-point (on/off) control to the closed loop. The system naturally settles into a limit-cycle oscillation.
 2. **Characteristic Extraction** — From the oscillation, measure the ultimate period *T_u* and the peak-to-peak amplitude *A_u*.
 3. **Plant Identification** — Use *T_u* and *A_u* together with knowledge of the Bang-Bang switching levels to derive an equivalent first-order-plus-dead-time (FOPDT) model.
-4. **PID Synthesis** — Apply modified Ziegler–Nichols / IMC-based formulas to the FOPDT model to compute *K_p*, *T_i*, *T_d*.
+4. **PID Synthesis** — Apply IMC-based tuning formulas to the FOPDT model to compute *K_p*, *T_i*, *T_d*, using the estimated dead time as the closed-loop tuning parameter *λ*.
 
 A detailed derivation, stability analysis, and experimental validation are provided in the paper.
 

@@ -66,8 +66,8 @@ initial excitation signal.
 
 A two-point (Bang-Bang) controller switches the manipulated variable between
 two fixed levels (e.g., fully ON and fully OFF). For a stable plant with
-integrating tendency, this produces a *limit-cycle oscillation* around the
-setpoint.
+sufficient gain and phase delay, this produces a *limit-cycle oscillation*
+around the setpoint.
 
 ### Key Measured Quantities
 
@@ -105,11 +105,18 @@ Target closed-loop time constant `λ = L` (default).
 
 ## Roadmap / Open Tasks
 
-- [ ] Complete derivation of FOPDT identification formulas (theory section)
-- [ ] Validate against industrial cooling benchmark (PT2 + dead time plant)
-- [ ] Add noise robustness analysis
-- [ ] Write results and discussion sections
-- [ ] Select target journal and adapt citation style
+### Completed
+- [x] Derivation of FOPDT identification formulas (theory section)
+- [x] FOPDT simulation validation on benchmark FOPDT plant
+- [x] Noise robustness analysis (discussion section)
+- [x] Results and discussion sections
+- [x] Nonlinear plant extension (Section 5)
+
+### Future Work
+- [ ] Experimental validation on a physical cooling test bench
+- [ ] Extension to second-order identification using multi-frequency relay tests
+- [ ] Online (recursive) adaptation of PID parameters
+- [ ] Integration with auto-tuning firmware for industrial controllers
 
 ---
 

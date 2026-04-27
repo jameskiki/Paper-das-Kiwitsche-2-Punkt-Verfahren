@@ -4,7 +4,6 @@
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
 \usepackage[english]{babel}
-\usepackage{lmodern}
 
 \usepackage{amsmath, amssymb, amsthm}
 \usepackage{graphicx}
@@ -12,18 +11,17 @@
 \usepackage{subcaption}
 \usepackage{booktabs}
 \usepackage{siunitx}
-\usepackage{hyperref}
+\usepackage[colorlinks=true, linkcolor=blue!70!black, citecolor=blue!70!black, urlcolor=blue]{hyperref}
 \usepackage{cleveref}
 \usepackage{cite}
-\usepackage{geometry}
-\usepackage{setspace}
 \usepackage{float}
 \usepackage{tikz}
 \usepackage{pgfplots}
 \pgfplotsset{compat=1.18}
+\usetikzlibrary{arrows.meta, positioning, shapes.geometric, fit, backgrounds}
 
-\geometry{margin=2.5cm}
-\onehalfspacing
+\usepackage{etoolbox}
+\AtBeginEnvironment{figure}{\captionsetup{justification=centering}}
 
 % ─── Theorem environments ────────────────────────────────────────────────────
 \newtheorem{theorem}{Theorem}[section]
@@ -44,9 +42,7 @@
        Bang-Bang Control as a Starting Point for\\
        Optimal PID Parameter Estimation}
 
-\author{[Author Names to be determined]}
-
-\date{\today}
+\author{[Anonymous]}
 
 % ─────────────────────────────────────────────────────────────────────────────
 \begin{document}
@@ -57,19 +53,18 @@
 \input{sections/abstract}
 \end{abstract}
 
-\tableofcontents
-\listoffigures
-
-\newpage
+\medskip\noindent\textbf{Keywords:} PID tuning, Bang-Bang control, two-point control, parameter estimation,
+FOPDT identification, limit cycle, industrial cooling, IMC.
 
 \input{sections/introduction}
 \input{sections/theory}
 \input{sections/methodology}
 \input{sections/results}
+\input{sections/nonlinear_extension}
 \input{sections/discussion}
 \input{sections/conclusion}
 
-\bibliographystyle{ieeetr}
+\bibliographystyle{plain}
 \bibliography{bibliography}
 
 \end{document}

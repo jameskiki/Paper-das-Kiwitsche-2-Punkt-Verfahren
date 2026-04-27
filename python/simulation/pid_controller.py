@@ -42,6 +42,7 @@ class PIDController:
         dt: float = 1.0,
         u_min: float = 0.0,
         u_max: float = 100.0,
+        init_output: float = 0.0,
     ) -> None:
         self.K_p = K_p
         self.T_i = T_i
@@ -51,7 +52,9 @@ class PIDController:
         self.u_min = u_min
         self.u_max = u_max
 
-        self._integral: float = 0.0
+        # Seed integral to match the desired steady-state output so the
+        # controller starts in balance (no initial drift when e=0).
+        self._integral: float = float(init_output)
         self._e_prev: float = 0.0
         self._deriv_filter: float = 0.0
 

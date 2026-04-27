@@ -23,6 +23,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from simulation.bang_bang_control import BangBangController, simulate_bang_bang
 from simulation.plant_models import FOPDTPlant
+import config
 
 
 # ─── Limit-cycle characteristic extraction ───────────────────────────────────
@@ -400,20 +401,25 @@ def imc_pid(
 
 def _demo() -> None:
     """Full KZV pipeline on a benchmark FOPDT plant."""
-    dt = 0.5  # [s] — finer step for accurate dead-time detection
+    # All values come from config.py so printed 'true' labels stay accurate
+    K_true  = config.PLANT_K
+    T_true  = config.PLANT_T
+    L_true  = config.PLANT_L
+    dt      = config.DT
+    setpoint = config.SETPOINT
+    t_end   = config.SIM_T_END
 
-    # True FOPDT plant (industrial heating/cooling benchmark)
-    K_true, T_true, L_true = 0.5, 120.0, 20.0
-    plant = FOPDTPlant(K=K_true, T=T_true, L=L_true, dt=dt, y0=20.0)
-    setpoint = 20.0
-    controller = BangBangController(u_max=100.0, u_min=0.0, d=0.3)
+    plant = FOPDTPlant(K=K_true, T=T_true, L=L_true, dt=dt, y0=setpoint)
+    controller = BangBangController(
+        u_max=config.BB_U_MAX, u_min=config.BB_U_MIN, d=config.BB_D
+    )
 
-    print("Running Bang-Bang simulation (3000 s) …")
+    print(f"Running Bang-Bang simulation ({t_end:.0f} s) …")
     t, y, u = simulate_bang_bang(
         plant=plant,
         controller=controller,
         setpoint=setpoint,
-        t_end=3000.0,
+        t_end=t_end,
         dt=dt,
     )
     e = setpoint - y

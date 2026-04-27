@@ -21,6 +21,28 @@ deployed as simple thermostats and safety limiters in cooling, heating, and
 refrigeration systems.
 These controllers inherently drive the plant into a limit-cycle oscillation
 that encodes rich information about the plant dynamics.
+\Cref{fig:intro_duty_cycle} illustrates this directly: as the setpoint
+changes, the duty cycle (fraction of time the actuator is fully on) shifts
+asymmetrically, reflecting the plant's steady-state gain.
+
+\begin{figure*}[t]
+    \centering
+    \includegraphics[width=0.96\linewidth]{figures/intro_duty_cycle.pdf}
+    \caption{Bang-Bang limit cycles at three setpoints for three FOPDT plants
+             sharing the same gain $K$ but different dynamics
+             (slow: $T=\SI{120}{\second}$, $L=\SI{20}{\second}$;
+              fast: $T=\SI{30}{\second}$, $L=\SI{5}{\second}$;
+              dead-time dominant: $T=\SI{15}{\second}$, $L=\SI{60}{\second}$).
+             \emph{Odd rows}: plant output $y(t)$, setpoint $r$ (dashed),
+             and hysteresis band $\pm d$ (shaded).
+             \emph{Even rows}: manipulated variable $u(t)$, with ON-periods
+             shaded and duty cycle (DC) annotated.
+             The DC values are identical across all three plants at every setpoint,
+             confirming that duty cycle depends only on $K$ and $r$ ---
+             not on $T$ or $L$. The oscillation period and amplitude do differ,
+             which is why the KZV extracts $T$ and $L$ separately.}
+    \label{fig:intro_duty_cycle}
+\end{figure*}
 
 \subsection{Motivation}
 \label{sec:motivation}
@@ -34,6 +56,21 @@ to the critical oscillation used in the Ziegler--Nichols closed-loop method.
 By additionally recovering the dead time from the phase of the oscillation,
 a complete FOPDT model can be estimated, enabling more robust IMC-style
 tuning.
+
+\Cref{fig:intro_phase_portrait} shows the phase-plane orbits of the same
+plant at three setpoints: each orbit is a unique, reproducible closed curve
+that serves as a fingerprint of the local plant linearisation.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.96\linewidth]{figures/intro_phase_portrait.pdf}
+    \caption{Phase-plane limit-cycle orbits ($y$ vs.\ $\dot{y}$) at
+             $r \in \{15, 20, 28\}$~°C (shaded interior).
+             Each orbit is a reproducible closed curve; its shape and
+             enclosed area encode the FOPDT parameters at that operating
+             point. Vertical dotted lines mark the respective setpoints.}
+    \label{fig:intro_phase_portrait}
+\end{figure}
 
 \subsection{Industrial Relevance: Cooling Systems}
 \label{sec:cooling}
@@ -56,7 +93,7 @@ The main contributions of this work are:
           cycle measurements (\cref{sec:theory}).
     \item Modified IMC-based PID tuning formulas adapted to the KZV
           identification (\cref{sec:methodology}).
-    \item Simulation validation on a second-order thermal plant with dead time,
+    \item Simulation validation on a first-order-plus-dead-time (FOPDT) plant
           representative of industrial cooling applications (\cref{sec:results}).
     \item A discussion of robustness to measurement noise and model mismatch
           (\cref{sec:discussion}).

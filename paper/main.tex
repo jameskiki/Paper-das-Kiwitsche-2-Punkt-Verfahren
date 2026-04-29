@@ -13,7 +13,6 @@
 \usepackage{siunitx}
 \usepackage[colorlinks=true, linkcolor=blue!70!black, citecolor=blue!70!black, urlcolor=blue]{hyperref}
 \usepackage{cleveref}
-\usepackage{cite}
 \usepackage{float}
 \usepackage{tikz}
 \usepackage{pgfplots}
@@ -28,6 +27,16 @@
 \newtheorem{lemma}[theorem]{Lemma}
 \newtheorem{definition}{Definition}[section]
 \newtheorem{remark}{Remark}[section]
+
+% ─── Cleveref names for custom environments ──────────────────────────────────
+\crefname{theorem}{Theorem}{Theorems}
+\Crefname{theorem}{Theorem}{Theorems}
+\crefname{lemma}{Lemma}{Lemmas}
+\Crefname{lemma}{Lemma}{Lemmas}
+\crefname{definition}{Definition}{Definitions}
+\Crefname{definition}{Definition}{Definitions}
+\crefname{remark}{Remark}{Remarks}
+\Crefname{remark}{Remark}{Remarks}
 
 % ─── Custom commands ─────────────────────────────────────────────────────────
 \newcommand{\Kp}{K_{\mathrm{p}}}

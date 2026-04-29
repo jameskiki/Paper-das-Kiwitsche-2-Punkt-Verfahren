@@ -77,9 +77,9 @@ condition
     \label{eq:hb}
 \end{equation}
 
-For the special case of zero hysteresis ($d = 0$), \cref{eq:df} reduces to
+For the special case of zero hysteresis ($d = 0$), \eqref{eq:df} reduces to
 the ideal relay describing function $N(A) = 4M/(\pi A)$, and
-\cref{eq:hb} becomes equivalent to the Ziegler--Nichols ultimate gain
+\eqref{eq:hb} becomes equivalent to the Ziegler--Nichols ultimate gain
 condition $|G(j\omega_u)| = \pi A / (4M)$.
 
 \subsection{FOPDT Plant Model}
@@ -118,7 +118,7 @@ constant~$T$, and dead time~$L$.
 
 \subsubsection{Parameter Identification from Limit Cycle}
 
-Evaluating \cref{eq:fopdt} at $s = j\omega_u$ gives
+Evaluating \eqref{eq:fopdt} at $s = j\omega_u$ gives
 \begin{align}
     |G(j\omega_u)| &= \frac{K}{\sqrt{1 + (\omega_u T)^2}},
     \label{eq:gain_cond} \\
@@ -136,14 +136,14 @@ $-1/N(A)$):
     \label{eq:phase_from_df}
 \end{align}
 
-Combining \cref{eq:phase_cond,eq:phase_from_df} yields
+Combining \eqref{eq:phase_cond} and~\eqref{eq:phase_from_df} yields
 \begin{equation}
     \arctan(\omega_u T) + \omega_u L
     = \pi - \arcsin\!\left(\frac{d}{A}\right).
     \label{eq:phase_id}
 \end{equation}
 
-With $\omega_u$ known from the measured period $\Tu$, \cref{eq:gain_cond,eq:gain_from_df,eq:phase_id}
+With $\omega_u$ known from the measured period $\Tu$, \eqref{eq:gain_cond}, \eqref{eq:gain_from_df} and~\eqref{eq:phase_id}
 form a system that can be solved for $K$, $T$, and $L$ if one additional
 assumption is introduced.
 A common engineering choice is to adopt the ratio $L/T$ from a
@@ -158,7 +158,7 @@ phase margin~\cite{Seborg2011}.
 \end{remark}
 
 \begin{remark}
-    While \cref{eq:gain_cond,eq:gain_from_df,eq:phase_id} characterise the
+    While \eqref{eq:gain_cond}, \eqref{eq:gain_from_df} and~\eqref{eq:phase_id} characterise the
     limit cycle and guarantee the existence and uniqueness of the FOPDT
     parameters $K$, $T$, $L$, the KZV does not solve this nonlinear system
     directly. Instead, Phase~3 (\cref{sec:method:phase3}) employs a

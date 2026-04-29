@@ -48,9 +48,13 @@ PLANT_T = config.PLANT_T
 PLANT_L = config.PLANT_L
 DT      = config.DT
 
-# Fast plant
-FAST_T = config.FAST_T
-FAST_L = config.FAST_L
+# Low-L/T (T-dominated) plant
+FAST_T = config.LOW_LT_T
+FAST_L = config.LOW_LT_L
+
+# Medium L/T plant
+MID_T = config.MID_T
+MID_L = config.MID_L
 
 # Dead-time-dominant plant
 DEAD_T = config.DEAD_T
@@ -104,138 +108,103 @@ def _last_n_cycles(t, y, r, n=3):
     return crossings[-(n + 1)], crossings[-1]
 
 
-# --- Figure 1: Duty-cycle comparison (two plants) ----------------------------
+# --- Figure 1: Duty-cycle comparison (3x3 grid) ------------------------------
 
-def _draw_plant_row(axes_y, axes_u, T, L, row_label, t_window: float | None = None):
-    """Populate one pair of y(t)/u(t) axis rows for a given plant.
+def _draw_plant_cell(ax, T, L, r, color, t_window: float | None = None):
+    """Draw a single y(t) panel combining ON/OFF background and e>0/e<0 shading."""
+    t, y, u = _simulate(r, T=T, L=L)
+    duty = (r / (PLANT_K * BB_U_MAX)) * 100.0
 
-    Parameters
-    ----------
-    t_window : float or None
-        If given, show the last *t_window* seconds instead of the last
-        3 complete cycles.  Pass the same value to both the slow and fast
-        plant rows so the x-axis spans are identical and the difference in
-        oscillation speed is immediately visible.
-    """
-    for col, (r, color) in enumerate(zip(SETPOINTS, COLORS)):
-        t, y, u = _simulate(r, T=T, L=L)
+    if t_window is not None:
+        mask = t >= (t[-1] - t_window)
+        tm = t[mask] - t[mask][0]
+        ym = y[mask]
+        um = u[mask]
+    else:
+        i0, i1 = _last_n_cycles(t, y, r, n=3)
+        tm = t[i0:i1 + 1] - t[i0]
+        ym = y[i0:i1 + 1]
+        um = u[i0:i1 + 1]
 
-        # Duty cycle computed analytically: DC = r / (K * U_max).
-        # At steady state the average plant output must equal r, so
-        # DC * U_max * K = r regardless of T, L, or hysteresis band.
-        # This is exactly the invariance the figure is meant to illustrate.
-        duty = (r / (PLANT_K * BB_U_MAX)) * 100.0
+    on_mask = um > 50
+    y_lo = min(float(ym.min()), r - BB_D * 3)
+    y_hi = max(float(ym.max()), r + BB_D * 3)
 
-        if t_window is not None:
-            mask = t >= (t[-1] - t_window)
-            tm = t[mask] - t[mask][0]
-            ym = y[mask]
-            um = u[mask]
-        else:
-            i0, i1 = _last_n_cycles(t, y, r, n=3)
-            tm = t[i0:i1 + 1] - t[i0]
-            ym = y[i0:i1 + 1]
-            um = u[i0:i1 + 1]
+    # ON/OFF background shading (lightest layer, drawn first)
+    ax.fill_between(tm, y_lo, y_hi, where=on_mask,
+                    step="post", alpha=0.12, color=color, linewidth=0)
 
-        ax_y = axes_y[col]
-        # Hysteresis band
-        ax_y.fill_between(tm, r - BB_D, r + BB_D,
-                          alpha=0.20, color=color, linewidth=0)
-        # Tracking error region
-        ax_y.fill_between(tm, ym, r, where=(ym > r + BB_D),
-                          alpha=0.10, color=color, linewidth=0, interpolate=True)
-        ax_y.fill_between(tm, ym, r, where=(ym < r - BB_D),
-                          alpha=0.10, color=color, linewidth=0, interpolate=True)
-        ax_y.plot(tm, ym, color=color, linewidth=1.5)
-        ax_y.axhline(r, color="gray", linestyle="--", linewidth=1.0)
-        ax_y.yaxis.set_major_locator(ticker.MaxNLocator(4, integer=False))
-        if col == 0:
-            ax_y.set_ylabel(f"$y(t)$ (\N{DEGREE SIGN}C)\n{row_label}", fontsize=9)
+    # Hysteresis band
+    ax.fill_between(tm, r - BB_D, r + BB_D,
+                    alpha=0.25, color=color, linewidth=0)
 
-        ax_u = axes_u[col]
-        ax_u.fill_between(tm, BB_U_MIN, um, where=(um > 50),
-                          step="post", alpha=0.30, color=color, linewidth=0)
-        ax_u.step(tm, um, color=color, where="post", linewidth=1.5)
-        ax_u.text(0.97, 0.82, f"DC = {duty:.0f}%",
-                  transform=ax_u.transAxes, ha="right", fontsize=9,
-                  bbox=dict(boxstyle="round,pad=0.25", fc="white",
-                            ec="gray", alpha=0.85))
-        if col == 0:
-            ax_u.set_ylabel("$u(t)$ (%)", fontsize=9)
-        ax_u.set_ylim(-12, 112)
-        ax_u.yaxis.set_major_locator(ticker.MultipleLocator(50))
+    # e>0 and e<0 regions (y outside hysteresis band)
+    ax.fill_between(tm, ym, r, where=(ym > r + BB_D),
+                    alpha=0.20, color=color, linewidth=0, interpolate=True)
+    ax.fill_between(tm, ym, r, where=(ym < r - BB_D),
+                    alpha=0.20, color=color, linewidth=0, interpolate=True)
+
+    ax.plot(tm, ym, color=color, linewidth=1.5)
+    ax.axhline(r, color="gray", linestyle="--", linewidth=1.0)
+    ax.text(0.97, 0.05, f"DC\u202f=\u202f{duty:.0f}%",
+            transform=ax.transAxes, ha="right", va="bottom", fontsize=9,
+            bbox=dict(boxstyle="round,pad=0.25", fc="white", ec="gray", alpha=0.85))
+    ax.set_ylim(y_lo, y_hi)
+    ax.yaxis.set_major_locator(ticker.MaxNLocator(4, integer=False))
 
 
 def plot_duty_cycle_setpoints():
-    """6-row x 3-col grid: fast / slow / dead-time-dominant plant rows."""
+    """3-row x 3-col grid: one y(t) panel per plant/setpoint combination.
+
+    ON/OFF periods are shown as a tinted background; the hysteresis band
+    and e>0 / e<0 deviation areas are overlaid as filled regions on the
+    same axes, eliminating the need for a separate u(t) subplot row.
+    """
+    plants = [
+        (FAST_T, FAST_L,
+         f"$L/T={FAST_L/FAST_T:.1f}$\n$T={FAST_T:.0f}$ s, $L={FAST_L:.0f}$ s"),
+        (MID_T,  MID_L,
+         f"$L/T={MID_L/MID_T:.1f}$\n$T={MID_T:.0f}$ s, $L={MID_L:.0f}$ s"),
+        (DEAD_T, DEAD_L,
+         f"$L/T={DEAD_L/DEAD_T:.0f}$\n$T={DEAD_T:.0f}$ s, $L={DEAD_L:.0f}$ s"),
+    ]
+
     fig, axes = plt.subplots(
-        6, 3, figsize=(10, 11.5),
-        gridspec_kw={"height_ratios": [1.6, 1.0, 1.6, 1.0, 1.6, 1.0],
-                     "hspace": 0.15, "wspace": 0.35},
+        3, 3, figsize=(10, 8),
+        sharey=False,
+        sharex="row",
+        gridspec_kw={"hspace": 0.38, "wspace": 0.38},
     )
 
-    for col, r in enumerate(SETPOINTS):
+    for col, (r, color) in enumerate(zip(SETPOINTS, COLORS)):
         axes[0, col].set_title(f"$r = {r:.0f}$\N{DEGREE SIGN}C",
-                               fontsize=10, color=COLORS[col], pad=4)
+                               fontsize=10, color=color, pad=4)
 
-    # Shared x-axis window for all three plant rows (set DC_PLOT_WINDOW in config.py)
-    T_WINDOW = DC_PLOT_WINDOW
+    for row, (T, L, label) in enumerate(plants):
+        for col, (r, color) in enumerate(zip(SETPOINTS, COLORS)):
+            ax = axes[row, col]
+            _draw_plant_cell(ax, T, L, r, color, t_window=None)
+            if col == 0:
+                ax.set_ylabel(f"$y(t)$ (\N{DEGREE SIGN}C)\n{label}", fontsize=9)
+            if row == 2:
+                ax.set_xlabel("3 limit cycles", fontsize=9)
+            # Never show raw time tick values — scale varies per row
+            ax.set_xticklabels([])
 
-    _draw_plant_row(
-        axes_y=[axes[0, c] for c in range(3)],
-        axes_u=[axes[1, c] for c in range(3)],
-        T=FAST_T, L=FAST_L,
-        row_label=f"Fast\n$T={FAST_T:.0f}$ s, $L={FAST_L:.0f}$ s",
-        t_window=T_WINDOW,
+    param_str = (
+        f"$K={PLANT_K}$  |  "
+        f"$u_{{\\max}}={BB_U_MAX:.0f}$, $u_{{\\min}}={BB_U_MIN:.0f}$  |  "
+        f"$d={BB_D}$ (hysteresis half-band)"
     )
-    for c in range(3):
-        axes[1, c].set_xlabel("Time (s)", fontsize=9)
-        axes[0, c].set_xticklabels([])
-
-    fig.text(
-        0.5, 0.664,
-        (f"Slow plant:  $T = {PLANT_T:.0f}$ s,  $L = {PLANT_L:.0f}$ s"
-         f"  \u2014  same $K = {PLANT_K}$  \u2192  same duty cycles"),
-        ha="center", va="center", fontsize=9, style="italic", color="#333333",
-        bbox=dict(boxstyle="round,pad=0.3", fc="#f7f7f7", ec="#aaaaaa"),
-    )
-
-    _draw_plant_row(
-        axes_y=[axes[2, c] for c in range(3)],
-        axes_u=[axes[3, c] for c in range(3)],
-        T=PLANT_T, L=PLANT_L,
-        row_label=f"Slow\n$T={PLANT_T:.0f}$ s, $L={PLANT_L:.0f}$ s",
-        t_window=T_WINDOW,
-    )
-    for c in range(3):
-        axes[3, c].set_xlabel("Time (s)", fontsize=9)
-        axes[2, c].set_xticklabels([])
-
-    fig.text(
-        0.5, 0.330,
-        (f"Dead-time-dominant:  $T = {DEAD_T:.0f}$ s,  $L = {DEAD_L:.0f}$ s"
-         f"  ($L/T = {DEAD_L/DEAD_T:.0f}$)  \u2014  same duty cycles"),
-        ha="center", va="center", fontsize=9, style="italic", color="#333333",
-        bbox=dict(boxstyle="round,pad=0.3", fc="#f7f7f7", ec="#aaaaaa"),
-    )
-
-    _draw_plant_row(
-        axes_y=[axes[4, c] for c in range(3)],
-        axes_u=[axes[5, c] for c in range(3)],
-        T=DEAD_T, L=DEAD_L,
-        row_label=f"Dead-time\ndominant\n$T={DEAD_T:.0f}$ s, $L={DEAD_L:.0f}$ s",
-        t_window=T_WINDOW,
-    )
-    for c in range(3):
-        axes[5, c].set_xlabel("Time (s)", fontsize=9)
-        axes[4, c].set_xticklabels([])
+    fig.text(0.5, -0.01, param_str, ha="center", va="top", fontsize=9,
+             color="dimgray",
+             bbox=dict(boxstyle="round,pad=0.3", fc="#f5f5f5", ec="lightgray", alpha=0.9))
 
     fig.suptitle(
         "Duty cycle is set by $K$ and setpoint only \u2014 not by $T$ or $L$",
         fontsize=11, y=1.005,
     )
     fig.tight_layout(rect=[0, 0, 1, 1])
-    fig.subplots_adjust(hspace=0.18)
     _save(fig, "intro_duty_cycle.pdf")
 
 
@@ -245,9 +214,9 @@ def plot_phase_portrait():
     """Phase-plane (y, dy/dt) orbits for slow, fast, and dead-time-dominant plants."""
     # Use a finer dt for the fast and dead-time-dominant plants so the orbit
     # has enough points to look smooth (avoid straight-line segments).
-    PHASE_DT_SLOW = config.DT       # slow plant — default is fine
-    PHASE_DT_FAST = config.DT_FAST  # fast plant: L=5s needs many more steps per delay
-    PHASE_DT_DEAD = config.DT_DEAD  # dead-time-dominant: shorter T needs finer resolution
+    PHASE_DT_LOW  = config.DT_LOW_LT  # L/T=0.1 plant (L=10s)
+    PHASE_DT_MID  = config.DT_MID   # L/T=1.0 plant (L=30s)
+    PHASE_DT_HIGH = config.DT_DEAD  # L/T=4.0 plant (L=60s)
 
     fig, axes = plt.subplots(
         1, 3, figsize=(16, 4.8),
@@ -256,12 +225,12 @@ def plot_phase_portrait():
     )
 
     plant_configs = [
-        (PLANT_T, PLANT_L, PHASE_DT_SLOW,
-         f"Slow plant\n$T={PLANT_T:.0f}$ s, $L={PLANT_L:.0f}$ s"),
-        (FAST_T,  FAST_L,  PHASE_DT_FAST,
-         f"Fast plant\n$T={FAST_T:.0f}$ s, $L={FAST_L:.0f}$ s"),
-        (DEAD_T,  DEAD_L,  PHASE_DT_DEAD,
-         f"Dead-time dominant\n$T={DEAD_T:.0f}$ s, $L={DEAD_L:.0f}$ s  ($L/T={DEAD_L/DEAD_T:.0f}$)"),
+        (FAST_T, FAST_L, PHASE_DT_LOW,
+         f"$L/T={FAST_L/FAST_T:.1f}$\n$T={FAST_T:.0f}$ s, $L={FAST_L:.0f}$ s"),
+        (MID_T,  MID_L,  PHASE_DT_MID,
+         f"$L/T={MID_L/MID_T:.1f}$\n$T={MID_T:.0f}$ s, $L={MID_L:.0f}$ s"),
+        (DEAD_T, DEAD_L, PHASE_DT_HIGH,
+         f"$L/T={DEAD_L/DEAD_T:.0f}$\n$T={DEAD_T:.0f}$ s, $L={DEAD_L:.0f}$ s  ($L/T={DEAD_L/DEAD_T:.0f}$)"),
     ]
 
     for ax, (T, L, phase_dt, title) in zip(axes, plant_configs):

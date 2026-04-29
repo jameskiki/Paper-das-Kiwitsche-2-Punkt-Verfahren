@@ -9,21 +9,27 @@ Run any plotting module from the ``python/`` directory after editing:
 
 # ── Benchmark (slow) FOPDT plant ─────────────────────────────────────────────
 # Representative industrial heating/cooling process.
-PLANT_K = 0.5      # process gain           [°C / %]
+PLANT_K = 0.4      # process gain           [°C / %]
 PLANT_T = 120.0    # time constant          [s]
 PLANT_L = 20.0     # dead time              [s]
 
-# ── Fast FOPDT plant ──────────────────────────────────────────────────────────
-# Same gain as the benchmark; shorter lag and dead time.
-# Used in intro figures to show that T/L do not affect duty cycle.
-FAST_T  = 30.0     # time constant          [s]
-FAST_L  = 5.0      # dead time              [s]
+# ── T-dominated FOPDT plant (low L/T) ───────────────────────────────────────
+# L/T ≈ 0.1: lag dominates, smooth near-sinusoidal oscillations.
+# Used in intro figures (top row).
+LOW_LT_T  = 100.0  # time constant          [s]
+LOW_LT_L  = 10.0   # dead time              [s]  → L/T = 0.1
 
-# ── Dead-time-dominant FOPDT plant ───────────────────────────────────────────
+# ── Balanced FOPDT plant (medium L/T) ────────────────────────────────────────
+# L/T = 1.0: equal lag and dead time, asymmetric sawtooth oscillations.
+# Used in intro figures (middle row).
+MID_T   = 30.0     # time constant          [s]
+MID_L   = 30.0     # dead time              [s]  → L/T = 1.0
+
+# ── Dead-time-dominant FOPDT plant (high L/T) ────────────────────────────────
 # L/T >> 1: oscillation is dominated by the dead time, not the lag.
-# Used in intro figures to illustrate the phase-portrait "fingerprint".
-DEAD_T  = 15.0     # time constant          [s]
-DEAD_L  = 60.0     # dead time              [s]  → L/T = 4
+# Used in intro figures (bottom row).
+DEAD_T  = 10.0     # time constant          [s]
+DEAD_L  = 100.0     # dead time             [s]  → L/T = 10
 
 # ── Bang-Bang controller ──────────────────────────────────────────────────────
 BB_U_MAX = 100.0   # controller output: ON  [%]
@@ -34,7 +40,8 @@ BB_D     = 0.3     # hysteresis half-band   [°C]
 DT = 0.5           # default step size [s]
 # Finer steps used in the phase portrait to keep orbits smooth.
 # Rule of thumb: dt << min(T, L) / 10
-DT_FAST = 0.05     # for fast plant (L=5s)             [s]
+DT_LOW_LT = 0.1    # for low-L/T plant (L=10s)         [s]
+DT_MID  = 0.5      # for medium-L/T plant (L=30s)      [s]
 DT_DEAD = 0.1      # for dead-time-dominant plant      [s]
 
 # ── Operating points ──────────────────────────────────────────────────────────
@@ -42,9 +49,9 @@ SETPOINT  = 20.0              # nominal setpoint used in results figures  [°C]
 SETPOINTS  = [15.0, 20.0, 25.0]  # setpoint sweep used in intro figures   [°C]
 
 # ── Intro duty-cycle figure display ──────────────────────────────────────────
-# Shared x-axis window shown for all three plant rows in intro_duty_cycle.pdf.
-# ~1-2 slow cycles, ~7 fast cycles, ~1 dead-time-dominant cycle at 150 s.
-DC_PLOT_WINDOW = 200.0   # [s]
+# Each cell auto-scales to 3 complete limit cycles (t_window=None).
+# DC_PLOT_WINDOW is kept here in case a fixed window is ever needed.
+DC_PLOT_WINDOW = 200.0   # [s]  (unused by default)
 
 # ── Simulation lengths ────────────────────────────────────────────────────────
 SIM_T_END = 3000.0   # default bang-bang run length for limit-cycle ID  [s]

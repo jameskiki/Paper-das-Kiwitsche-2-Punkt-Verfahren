@@ -19,12 +19,6 @@ within \SI{2}{\percent} of the theoretically optimal IMC controller, while
 Ziegler--Nichols tuning yields \SI{57.9}{\percent} overshoot and more than
 eight times the IAE.
 
-\Cref{sec:nonlinear} extends the analysis to a nonlinear FOPDT-like plant.
-The KZV is shown to accurately recover the local linearisation at each
-operating point, enabling a simple gain-scheduling strategy: one additional
-Bang-Bang experiment at any new setpoint is sufficient to retune the PID
-optimally without requiring an explicit nonlinear plant model.
-
 The main advantages of the KZV over classical methods are:
 \begin{itemize}
     \item \textbf{No additional experiment needed}: the Bang-Bang phase
@@ -41,6 +35,8 @@ The main advantages of the KZV over classical methods are:
 Open directions include:
 \begin{itemize}
     \item Experimental validation on a physical cooling test bench.
+    \item Gain-scheduled KZV: running the identification at multiple operating
+          points to build a look-up table of PID parameters for nonlinear plants.
     \item Extension to second-order identification using multi-frequency
           relay tests.
     \item Online (recursive) adaptation of the PID parameters as the plant

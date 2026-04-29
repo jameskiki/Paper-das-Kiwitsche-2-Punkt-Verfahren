@@ -45,6 +45,23 @@ This is generally desirable for robust industrial control.
 An extension using a second-order relay feedback test~\cite{Wang1999}
 is left for future work.
 
+\subsection{Robustness to Mild Plant Nonlinearities}
+\label{sec:disc:nonlinear}
+
+The KZV derivation assumes a linear FOPDT plant, yet it retains a useful degree
+of robustness to mild operating-point-dependent parameter variation.
+Because the Bang-Bang limit cycle oscillates around a single setpoint~$r$
+with amplitude~$\Au$, the identification is effectively performed on the
+\emph{local linearisation} of the plant at~$r$: in the limit of small
+hysteresis $d \ll \Au$, the estimates $(\hat{K}, \hat{T}, \hat{L})$ converge
+to the true local FOPDT parameters at the current operating point.
+For plants with moderate nonlinearities --- such as the gain and time-constant
+variation typical of thermal and cooling circuits --- this means that repeating
+the KZV identification at any new setpoint yields correctly updated PID
+parameters without requiring an explicit nonlinear model.
+A formal extension to gain-scheduled tuning across a range of operating
+points is left for future work.
+
 \subsection{Limitations}
 \label{sec:disc:limitations}
 
@@ -64,14 +81,32 @@ is left for future work.
 
 The KZV is most closely related to the relay feedback tuning method of
 \AA{}str\"om and H\"agglund~\cite{Astrom1984}, which also uses a relay
-(Bang-Bang without hysteresis) to excite the ultimate oscillation.
-The key differences are:
-\begin{enumerate}
-    \item KZV accounts for the hysteresis of the real relay, improving
-          accuracy when $d / A$ is non-negligible.
-    \item KZV extracts the dead time $L$ in addition to $\Ku$ and $\Tu$,
-          enabling IMC-based (rather than ZN-based) PID synthesis.
-    \item KZV is designed to use the Bang-Bang controller that is already
-          present in the system, requiring no additional hardware or software
-          mode.
-\end{enumerate}
+(Bang-Bang without hysteresis) to excite a sustained oscillation.
+The two methods share the same underlying experiment but make different
+trade-offs:
+
+\begin{itemize}
+    \item \textbf{\AA{}str\"om \& H\"agglund} read a single point on the
+          Nyquist curve ($\Ku$, $\omega_u$) from the limit cycle via
+          describing-function analysis. Because this requires essentially no
+          assumption about the plant structure, the method is broadly
+          applicable across very different process types. PID parameters are
+          then obtained via Ziegler--Nichols-style rules, which do not
+          explicitly account for dead time.
+    \item \textbf{KZV} extracts three time-domain slope measurements from
+          the same limit cycle to estimate the full FOPDT triple
+          $(\hat{K}, \hat{T}, \hat{L})$ and tunes via IMC, which exposes a
+          robustness knob $\lambda$ and treats dead time as a first-class
+          parameter. The price for this richer model is two-fold: (i) the
+          plant must be reasonably well approximated by FOPDT, and (ii)
+          slope estimates are more sensitive to measurement noise than
+          amplitude/period estimates.
+\end{itemize}
+
+The two approaches are therefore best viewed as \emph{complementary}.
+For general-purpose auto-tuning across heterogeneous plants, classical
+relay feedback remains the more conservative default. For the FOPDT-friendly
+process class targeted in this work --- in particular thermal and cooling
+systems with non-negligible dead time --- the KZV's explicit dead-time
+estimate and IMC tuning typically yield a more transparent and easier-to-tune
+result from the same experimental data.

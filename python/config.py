@@ -57,7 +57,7 @@ DC_PLOT_WINDOW = 200.0   # [s]  (unused by default)
 SIM_T_END = 3000.0   # default bang-bang run length for limit-cycle ID  [s]
 
 # ── Limit-cycle figure ────────────────────────────────────────────────────────
-LC_PLOT_WINDOW = 800.0   # trailing window shown in the limit-cycle figure  [s]
+LC_PLOT_WINDOW = 200.0   # trailing window shown in the limit-cycle figure  [s]
 
 # ── Linear step-response figure (Figure 2) ───────────────────────────────────
 STEP_T_END    = 1200.0   # total simulation length for the step response    [s]

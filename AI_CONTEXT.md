@@ -9,10 +9,32 @@ changes.
 ## Purpose
 
 This is a scientific publication repository. The goal is to eventually produce a
-peer-reviewable paper on the *Kiwitsche 2-Punkt-Verfahren* — a systematic
-procedure for estimating optimal PID control parameters for complex industrial
-plants (e.g., cooling systems) using Bang-Bang (two-point) control as the
-initial excitation signal.
+peer-reviewable paper on the *Kiwitsche 2-Punkt-Verfahren* (KZV) — a procedure
+for estimating PID control parameters for plants that are well approximated by
+a first-order-plus-dead-time (FOPDT) model (e.g., thermal / cooling systems),
+using Bang-Bang (two-point) control as the initial excitation signal.
+
+### Scope and positioning
+
+The KZV is **not** a replacement for established relay-feedback auto-tuners
+such as Åström & Hägglund's method. It is a **specialised variant** of the
+same underlying idea (extract plant information from a relay-induced limit
+cycle), with a different trade-off:
+
+- **Åström relay method:** extracts a single Nyquist point ($K_u$, $\omega_u$)
+  via describing-function analysis. Makes essentially no assumption about the
+  plant structure → broadly applicable, but does not separate dead time from
+  lag.
+- **KZV (this work):** extracts the full FOPDT triple ($\hat K$, $\hat T$,
+  $\hat L$) via time-domain slope measurements within each half-cycle.
+  Recovers more information from the same experiment, but **only valid when
+  the FOPDT approximation holds** and is more sensitive to measurement noise
+  (slopes amplify noise).
+
+When writing or editing the paper, frame the KZV as **complementary** to
+Åström's method, not as universally superior. Claims should be scoped to
+FOPDT-like (notably thermal) processes. Avoid wording that suggests the KZV
+outperforms relay feedback in general.
 
 ---
 
@@ -137,10 +159,14 @@ a pull request against `main`.
 
 1. **Do not change the paper's scientific claims** without explicit user
    instruction.
-2. **Python changes must not break existing figure outputs** — run the plotting
+2. **Do not overstate the method.** The KZV is a specialised FOPDT-oriented
+   variant of relay-feedback identification, not a general-purpose
+   replacement for Åström's method. Keep comparisons balanced and scope
+   claims to plants where the FOPDT assumption is reasonable.
+3. **Python changes must not break existing figure outputs** — run the plotting
    scripts and verify figures before committing.
-3. **LaTeX changes must compile cleanly** — run `pdflatex main.tex` and check
+4. **LaTeX changes must compile cleanly** — run `pdflatex main.tex` and check
    for errors.
-4. **Keep this file up to date** — if you add a new convention, module, or
+5. **Keep this file up to date** — if you add a new convention, module, or
    design decision, document it here.
-5. Read `CONTRIBUTING.md` for commit-message and PR conventions.
+6. Read `CONTRIBUTING.md` for commit-message and PR conventions.

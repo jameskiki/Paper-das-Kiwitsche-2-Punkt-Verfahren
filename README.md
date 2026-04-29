@@ -8,13 +8,17 @@ A paper on a systematic procedure for estimating optimal PID control parameters 
 
 ## Overview
 
-Classical PID tuning methods (Ziegler–Nichols, Cohen–Coon, etc.) rely on step responses or manual tuning, which can be time-consuming and impractical for complex industrial systems. This paper presents the **Kiwitsche 2-Punkt-Verfahren**: a procedure that leverages the inherent Bang-Bang (on/off) oscillation of a system to extract the plant characteristics needed to compute optimal PID parameters automatically.
+Classical PID tuning methods (Ziegler–Nichols, Cohen–Coon, etc.) rely on step responses or manual tuning, which can be time-consuming. Relay-feedback auto-tuners (most notably Åström & Hägglund, 1984) avoid the open-loop step test by reading a single Nyquist point from a relay-induced limit cycle.
 
-The method is especially suited for:
+The **Kiwitsche 2-Punkt-Verfahren** (KZV) is a **specialised variant** of that same idea: instead of extracting one frequency-domain point, it uses time-domain slope measurements within each half-cycle to recover a full FOPDT model ($\hat{K}$, $\hat{T}$, $\hat{L}$) — and then tunes via IMC.
 
-- Industrial cooling/HVAC systems
-- Thermal processes with significant dead time
-- Any SISO plant that can safely be excited by two-point (Bang-Bang) control
+This trade-off makes KZV well suited for:
+
+- Industrial cooling/HVAC systems and other thermal processes
+- SISO plants that are reasonably well approximated by FOPDT
+- Settings where the Bang-Bang controller is already present (e.g.\ commissioning of thermostatic loops)
+
+KZV is **not** intended as a general-purpose replacement for Åström-style relay tuning. Where the FOPDT assumption does not hold, or where measurement noise is high (slope estimates amplify noise), classical relay feedback may give more reliable results.
 
 ---
 

@@ -50,12 +50,20 @@ asymmetrically, reflecting the plant's steady-state gain.
 This paper proposes the \emph{Kiwitsche 2-Punkt-Verfahren} (KZV), a procedure
 that exploits the Bang-Bang limit cycle to identify the plant and synthesise
 a PID controller --- all without requiring an additional open-loop experiment.
-The key insight is that the limit cycle produced by a Bang-Bang controller
-with known switching levels is equivalent, in the describing-function sense,
-to the critical oscillation used in the Ziegler--Nichols closed-loop method.
-By additionally recovering the dead time from the phase of the oscillation,
-a complete FOPDT model can be estimated, enabling more robust IMC-style
-tuning.
+The KZV is best understood as a \emph{specialised variant} of the
+relay-feedback identification idea pioneered by
+\AA{}str\"om and H\"agglund~\cite{Astrom1984}: rather than reading a single
+Nyquist point from the limit cycle, the KZV uses time-domain slope
+measurements within each half-cycle to estimate the three parameters of an
+FOPDT model directly.
+This trades a small amount of generality (the plant must be reasonably well
+approximated by FOPDT, and slope estimates are more noise-sensitive than
+amplitude/period measurements) for explicit dead-time identification, which
+in turn enables IMC-based PID tuning with a transparent robustness knob
+$\lambda$.
+The approach is therefore intended to \emph{complement} classical relay
+feedback for the class of plants where the FOPDT assumption is a natural
+fit --- most notably thermal and cooling processes.
 
 \Cref{fig:intro_phase_portrait} shows the phase-plane orbits of the same
 plant at three setpoints: each orbit is a unique, reproducible closed curve
@@ -90,12 +98,15 @@ identification, shortening start-up time.
 The main contributions of this work are:
 \begin{enumerate}
     \item A closed-form derivation of FOPDT parameters from Bang-Bang limit
-          cycle measurements (\cref{sec:theory}).
-    \item Modified IMC-based PID tuning formulas adapted to the KZV
-          identification (\cref{sec:methodology}).
+          cycle measurements, using time-domain transient slopes
+          (\cref{sec:theory}).
+    \item IMC-based PID tuning formulas applied to the KZV-identified FOPDT
+          model (\cref{sec:methodology}).
     \item Simulation validation on a first-order-plus-dead-time (FOPDT) plant
           representative of industrial cooling applications (\cref{sec:results}).
-    \item A discussion of robustness to measurement noise and model mismatch
+    \item A discussion of the method's scope, robustness to measurement
+          noise, and the conditions under which it complements --- rather
+          than replaces --- classical relay feedback identification
           (\cref{sec:discussion}).
 \end{enumerate}
 

@@ -171,7 +171,7 @@ def plot_duty_cycle_setpoints():
 
     fig, axes = plt.subplots(
         3, 3, figsize=(10, 8),
-        sharey=False,
+        sharey=True,
         sharex="row",
         gridspec_kw={"hspace": 0.38, "wspace": 0.38},
     )

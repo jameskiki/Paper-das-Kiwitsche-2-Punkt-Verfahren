@@ -64,9 +64,9 @@ NL_STEP_SIZE      = config.NL_STEP_SIZE
 
 # Matplotlib style
 plt.rcParams.update({
-    "font.size": 11,
-    "axes.labelsize": 11,
-    "legend.fontsize": 10,
+    "font.size": 10,
+    "axes.labelsize": 10,
+    "legend.fontsize": 9,
     "figure.dpi": 150,
     "lines.linewidth": 1.5,
 })
@@ -242,7 +242,19 @@ def plot_step_response_comparison(fopdt_params: dict) -> None:
     ax.set_ylim(-0.5, 9.5)   # clip ZN overshoot — it exceeds this but the key comparison is visible
     ax.set_xlim(-20, t_end - step_time)
     ax.legend(loc="upper left")
-    fig.tight_layout()
+    fig.suptitle(
+        "KZV-IMC vs Ziegler-Nichols vs Ideal IMC \u2014 Closed-Loop Step Response",
+        fontsize=11, y=1.005,
+    )
+    param_str = (
+        f"$K={PLANT_K}$, $T={PLANT_T:.0f}$ s, $L={PLANT_L:.0f}$ s  |  "
+        f"$u_{{\\max}}={BB_U_MAX:.0f}$, $u_{{\\min}}={BB_U_MIN:.0f}$  |  "
+        f"step = +{STEP_SIZE:.0f}\N{DEGREE SIGN}C at $t=0$  |  shaded band = \u00b15\u202f%%"
+    )
+    fig.text(0.5, -0.01, param_str, ha="center", va="top", fontsize=9,
+             color="dimgray",
+             bbox=dict(boxstyle="round,pad=0.3", fc="#f5f5f5", ec="lightgray", alpha=0.9))
+    fig.tight_layout(rect=[0, 0, 1, 1])
     _save(fig, "step_response_comparison.pdf")
 
     # Print metrics table
@@ -258,21 +270,25 @@ def _run_setpoint_identification(
     setpoint: float,
     nonlinear: bool,
     t_end: float,
+    K: float = PLANT_K,
+    T: float = PLANT_T,
+    L: float = PLANT_L,
+    dt: float = DT,
 ) -> dict[str, float] | None:
     if nonlinear:
         plant = NonlinearFOPDTPlant(
-            K0=PLANT_K,
-            T0=PLANT_T,
-            L=PLANT_L,
-            dt=DT,
+            K0=K,
+            T0=T,
+            L=L,
+            dt=dt,
             y0=setpoint,
             y_ref=SETPOINT,
         )
     else:
-        plant = FOPDTPlant(K=PLANT_K, T=PLANT_T, L=PLANT_L, dt=DT, y0=setpoint)
+        plant = FOPDTPlant(K=K, T=T, L=L, dt=dt, y0=setpoint)
 
     ctrl = BangBangController(u_max=BB_U_MAX, u_min=BB_U_MIN, d=BB_D)
-    t, y, u = simulate_bang_bang(plant, ctrl, setpoint, t_end=t_end, dt=DT)
+    t, y, u = simulate_bang_bang(plant, ctrl, setpoint, t_end=t_end, dt=dt)
     e = setpoint - y
 
     try:
@@ -281,7 +297,7 @@ def _run_setpoint_identification(
             t=t,
             y=y,
             u=u,
-            dt=DT,
+            dt=dt,
             u_min=BB_U_MIN,
             u_max=BB_U_MAX,
             n_last=5,
@@ -299,7 +315,7 @@ def plot_setpoint_sweep_preview() -> None:
     linear_estimates: list[dict[str, float]] = []
     nonlinear_estimates: list[dict[str, float]] = []
 
-    fig_lc, axes_lc = plt.subplots(2, 2, figsize=(10, 6), sharex=True)
+    fig_lc, axes_lc = plt.subplots(2, 2, figsize=(10, 6), sharex=True, sharey=True)
     axes_flat = axes_lc.flatten()
 
     for idx, sp in enumerate(setpoints):
@@ -484,12 +500,178 @@ def plot_nonlinear_analysis() -> None:
     ax.axhline(step_size * 1.05, color="lightgray", linestyle=":", linewidth=0.8)
     ax.axhline(step_size * 0.95, color="lightgray", linestyle=":", linewidth=0.8)
     ax.set_xlabel("Time after step (s)")
-    ax.set_ylabel("Output change (°C)")
-    ax.set_title(f"Nonlinear Plant — Step Response at {target_sp:.0f} °C Operating Point")
+    ax.set_ylabel("Output change (\N{DEGREE SIGN}C)")
     ax.legend()
     ax.set_xlim(-20, t_end_step - step_time)
-    fig.tight_layout()
+    fig.suptitle(
+        f"Nonlinear Plant \u2014 Step Response at {target_sp:.0f}\N{DEGREE SIGN}C Operating Point",
+        fontsize=11, y=1.005,
+    )
+    param_str = (
+        f"$K_0={PLANT_K}$, $T_0={PLANT_T:.0f}$ s, $L={PLANT_L:.0f}$ s  |  "
+        f"$u_{{\\max}}={BB_U_MAX:.0f}$, $u_{{\\min}}={BB_U_MIN:.0f}$  |  "
+        f"step = +{NL_STEP_SIZE:.0f}\N{DEGREE SIGN}C at $t=0$  |  shaded band = \u00b15\u202f%%"
+    )
+    fig.text(0.5, -0.01, param_str, ha="center", va="top", fontsize=9,
+             color="dimgray",
+             bbox=dict(boxstyle="round,pad=0.3", fc="#f5f5f5", ec="lightgray", alpha=0.9))
+    fig.tight_layout(rect=[0, 0, 1, 1])
     _save(fig, "nonlinear_step_response.pdf")
+
+
+# ─── Figure 4: PID setpoint comparison (mirrors intro duty-cycle grid) ───────
+
+_PID_COLORS = ["#1565C0", "#2E7D32", "#BF360C"]  # same palette as intro figures
+
+
+def _draw_pid_cell(
+    ax: plt.Axes,
+    setpoint: float,
+    color: str,
+    fopdt_params: dict,
+    plant_K: float = PLANT_K,
+    plant_T: float = PLANT_T,
+    plant_L: float = PLANT_L,
+) -> None:
+    """Draw one PID step-response panel, mirroring the style of _draw_plant_cell."""
+    step_size = STEP_SIZE
+    step_time = STEP_PRE_TIME
+    t_end = STEP_T_END
+
+    # Steady-state control output to hold the pre-step operating point
+    u_ss = max(BB_U_MIN, min(BB_U_MAX, (setpoint - step_size) / plant_K))
+
+    # Three controllers: KZV-IMC, Ziegler-Nichols, Ideal IMC
+    pid_kzv = imc_pid(
+        K=fopdt_params["K"], T=fopdt_params["T"], L=fopdt_params["L"],
+        lambda_=fopdt_params["L"],
+    )
+
+    omega_pc = math.pi / max(fopdt_params["L"], 1e-6)
+    K_u_zn = math.sqrt(1.0 + (omega_pc * fopdt_params["T"]) ** 2) / max(fopdt_params["K"], 1e-6)
+    T_u_zn = 2.0 * math.pi / omega_pc
+    pid_zn = {"K_p": 0.6 * K_u_zn, "T_i": 0.5 * T_u_zn, "T_d": 0.125 * T_u_zn}
+
+    pid_ideal = imc_pid(K=plant_K, T=plant_T, L=plant_L, lambda_=plant_L)
+
+    configs = [
+        ("KZV-IMC",         pid_kzv,   color,    "-",   2.0),
+        ("Ziegler-Nichols", pid_zn,    color,    "--",  1.5),
+        ("Ideal IMC",       pid_ideal, color,    ":",   1.5),
+    ]
+
+    # ±5 % settling band shading (mirrors hysteresis band in duty-cycle plot)
+    band = 0.05 * step_size
+    ax.fill_between(
+        [-step_time, t_end - step_time],
+        setpoint - band, setpoint + band,
+        alpha=0.20, color=color, linewidth=0,
+    )
+    ax.axhline(setpoint, color="gray", linestyle="--", linewidth=1.0)
+
+    n_steps = int(t_end / DT)
+    t_arr = np.arange(n_steps) * DT
+
+    for label, params, lcolor, ls, lw in configs:
+        plant = FOPDTPlant(K=plant_K, T=plant_T, L=plant_L, dt=DT,
+                           y0=setpoint - step_size)
+        ctrl = PIDController(
+            K_p=params["K_p"], T_i=params["T_i"], T_d=params["T_d"],
+            dt=DT, u_min=BB_U_MIN, u_max=BB_U_MAX,
+            init_output=u_ss,
+        )
+        y_arr = np.empty(n_steps)
+        for k in range(n_steps):
+            sp_k = setpoint if t_arr[k] >= step_time else setpoint - step_size
+            y_arr[k] = plant.step(ctrl.compute(sp_k, plant.y))
+
+        ax.plot(t_arr - step_time, y_arr,
+                color=lcolor, linestyle=ls, linewidth=lw, label=label, alpha=0.85)
+
+    y_lo = setpoint - step_size - 0.5
+    y_hi = setpoint + step_size * 0.6
+    ax.set_ylim(y_lo, y_hi)
+    ax.yaxis.set_major_locator(ticker.MaxNLocator(4, integer=False))
+
+
+def plot_pid_setpoint_comparison() -> None:
+    """3×3 grid of PID step responses mirroring ``intro_duty_cycle.pdf``.
+
+    Rows  — three plants: T-dominated (L/T=0.1), balanced (L/T=1), dead-time
+            dominant (L/T=10), matching the intro figure row order.
+    Columns — three setpoints (15, 20, 25 °C) in the same colors as the intro.
+
+    Each cell: KZV identification run on that plant/setpoint, then three
+    closed-loop step responses overlaid — KZV-IMC (solid), Ziegler-Nichols
+    (dashed), Ideal IMC (dotted).
+    """
+    setpoints = config.SETPOINTS
+    colors = _PID_COLORS
+
+    plants = [
+        (config.LOW_LT_T,  config.LOW_LT_L,
+         f"$L/T={config.LOW_LT_L/config.LOW_LT_T:.1f}$\n"
+         f"$T={config.LOW_LT_T:.0f}$ s, $L={config.LOW_LT_L:.0f}$ s"),
+        (config.MID_T, config.MID_L,
+         f"$L/T={config.MID_L/config.MID_T:.1f}$\n"
+         f"$T={config.MID_T:.0f}$ s, $L={config.MID_L:.0f}$ s"),
+        (config.DEAD_T, config.DEAD_L,
+         f"$L/T={config.DEAD_L/config.DEAD_T:.0f}$\n"
+         f"$T={config.DEAD_T:.0f}$ s, $L={config.DEAD_L:.0f}$ s"),
+    ]
+
+    fig, axes = plt.subplots(
+        3, 3, figsize=(10, 8),
+        sharey=False,
+        sharex="row",
+        gridspec_kw={"hspace": 0.38, "wspace": 0.38},
+    )
+
+    for col, (r, color) in enumerate(zip(setpoints, colors)):
+        axes[0, col].set_title(f"$r = {r:.0f}$\N{DEGREE SIGN}C",
+                               fontsize=10, color=color, pad=4)
+
+    for row, (pT, pL, label) in enumerate(plants):
+        for col, (r, color) in enumerate(zip(setpoints, colors)):
+            ax = axes[row, col]
+
+            print(f"  KZV ID: plant L/T={pL/pT:.1f}, setpoint {r:.0f} °C …")
+            result = _run_setpoint_identification(
+                r, nonlinear=False, t_end=SIM_T_END,
+                K=PLANT_K, T=pT, L=pL,
+            )
+            if result is None:
+                ax.text(0.5, 0.5, "ID failed", transform=ax.transAxes,
+                        ha="center", va="center", color="red")
+                continue
+
+            _draw_pid_cell(ax, r, color, result,
+                           plant_K=PLANT_K, plant_T=pT, plant_L=pL)
+
+            if col == 0:
+                ax.set_ylabel(f"$y(t)$ (\N{DEGREE SIGN}C)\n{label}", fontsize=9)
+                if row == 0:
+                    ax.legend(loc="lower right", fontsize=8)
+            if row == 2:
+                ax.set_xlabel(f"+{STEP_SIZE:.0f}\N{DEGREE SIGN}C step", fontsize=9)
+            ax.set_xticklabels([])
+
+    param_str = (
+        f"$K={PLANT_K}$  |  "
+        f"$u_{{\\max}}={BB_U_MAX:.0f}$, $u_{{\\min}}={BB_U_MIN:.0f}$  |  "
+        f"shaded band = ±5\u202f% of step  |  "
+        f"solid = KZV-IMC, dashed = ZN, dotted = Ideal IMC"
+    )
+    fig.text(0.5, -0.01, param_str, ha="center", va="top", fontsize=9,
+             color="dimgray",
+             bbox=dict(boxstyle="round,pad=0.3", fc="#f5f5f5", ec="lightgray", alpha=0.9))
+
+    fig.suptitle(
+        "KZV-IMC vs Ziegler-Nichols vs Ideal IMC — closed-loop step response",
+        fontsize=11, y=1.005,
+    )
+    fig.tight_layout(rect=[0, 0, 1, 1])
+    _save(fig, "results_pid_comparison.pdf")
 
 
 # ─── Main ─────────────────────────────────────────────────────────────────────
@@ -553,6 +735,31 @@ def main() -> None:
     axes[0].text(t_au + 5, (y_mid_top + y_mid_bot) / 2, r"$A_u$",
                  ha="left", va="center", fontsize=10, color="darkred")
 
+    # L annotation: dead time shown on the y(t) panel.
+    # At a rising edge of u (OFF→ON), y does not respond until L seconds later.
+    # Show two vertical dashed lines and a spanning arrow.
+    t_win = t_lc[mask]
+    u_win = u_lc[mask]
+    y_win = y_lc[mask]
+    rising_edges = [i for i in range(1, len(u_win))
+                    if u_win[i - 1] < 50 and u_win[i] >= 50]
+    # Use the second rising edge (if available) so there's room to the left
+    _re_idx = rising_edges[1] if len(rising_edges) >= 2 else rising_edges[0] if rising_edges else None
+    if _re_idx is not None:
+        t_edge = t_win[_re_idx]
+        t_resp = t_edge + PLANT_L
+        y_lo_ann = float(y_win.min())
+        y_ann = y_lo_ann - 0.3 * (float(y_win.max()) - float(y_win.min()))
+        axes[0].axvline(t_edge, color="black", linestyle=":", linewidth=0.9, alpha=0.7)
+        axes[0].axvline(t_resp, color="black", linestyle=":", linewidth=0.9, alpha=0.7)
+        axes[0].annotate(
+            "", xy=(t_resp, y_lo_ann), xytext=(t_edge, y_lo_ann),
+            arrowprops=dict(arrowstyle="<->", color="black", lw=1.2),
+            annotation_clip=False,
+        )
+        axes[0].text((t_edge + t_resp) / 2, y_lo_ann - 0.15, r"$L$",
+                     ha="center", va="top", fontsize=10)
+
     axes[0].set_ylabel(r"Temperature ($^{\circ}$C)")
     axes[0].legend(loc="upper right")
 
@@ -562,7 +769,24 @@ def main() -> None:
     axes[1].legend(loc="upper right")
     axes[1].set_ylim(-10, 110)
     axes[1].yaxis.set_major_locator(plt.MultipleLocator(25))
-    fig.tight_layout()
+    # Mirror the vertical reference lines on u(t) panel for visual continuity
+    if _re_idx is not None:
+        axes[1].axvline(t_edge, color="black", linestyle=":", linewidth=0.9, alpha=0.7)
+        axes[1].axvline(t_resp, color="black", linestyle=":", linewidth=0.9, alpha=0.7)
+
+    fig.suptitle(
+        "Bang-Bang Limit Cycle \u2014 Benchmark Cooling Plant",
+        fontsize=11, y=1.005,
+    )
+    param_str = (
+        f"$K={PLANT_K}$, $T={PLANT_T:.0f}$ s, $L={PLANT_L:.0f}$ s  |  "
+        f"$u_{{\\max}}={BB_U_MAX:.0f}$, $u_{{\\min}}={BB_U_MIN:.0f}$  |  "
+        f"$d={BB_D}$ (hysteresis half-band)"
+    )
+    fig.text(0.5, -0.01, param_str, ha="center", va="top", fontsize=9,
+             color="dimgray",
+             bbox=dict(boxstyle="round,pad=0.3", fc="#f5f5f5", ec="lightgray", alpha=0.9))
+    fig.tight_layout(rect=[0, 0, 1, 1])
     _save(fig, "limit_cycle.pdf")
 
     print("\nRunning FOPDT identification (transient slope method) …")
@@ -582,6 +806,9 @@ def main() -> None:
 
     print("\nGenerating Figure 3: Nonlinear plant analysis …")
     plot_nonlinear_analysis()
+
+    print("\nGenerating Figure 4: PID setpoint comparison …")
+    plot_pid_setpoint_comparison()
 
     print("\nAll figures saved to paper/figures/")
 

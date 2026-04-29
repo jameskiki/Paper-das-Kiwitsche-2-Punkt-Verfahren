@@ -72,6 +72,55 @@ plt.rcParams.update({
 })
 
 
+class NonlinearFOPDTPlant:
+    """Synthetic nonlinear FOPDT-like plant for preview figures.
+
+    This keeps the same structure as a delayed first-order plant, but lets
+    process gain and time constant vary smoothly with operating point.
+    """
+
+    def __init__(
+        self,
+        K0: float,
+        T0: float,
+        L: float,
+        dt: float = 0.1,
+        y0: float = 0.0,
+        y_ref: float = 20.0,
+        gain_slope: float = -0.015,
+        tau_slope: float = 0.02,
+    ) -> None:
+        self.K0 = K0
+        self.T0 = T0
+        self.L = L
+        self.dt = dt
+        self.y = y0
+        self.y_ref = y_ref
+        self.gain_slope = gain_slope
+        self.tau_slope = tau_slope
+
+        self._delay_steps = max(1, int(round(L / dt)))
+        self._u_buffer: list[float] = [0.0] * self._delay_steps
+
+    def _K_eff(self) -> float:
+        y_norm = (self.y - self.y_ref) / max(abs(self.y_ref), 1.0)
+        return max(0.05, self.K0 * (1.0 + self.gain_slope * y_norm * 10.0))
+
+    def _T_eff(self) -> float:
+        y_norm = (self.y - self.y_ref) / max(abs(self.y_ref), 1.0)
+        return max(5.0, self.T0 * (1.0 + self.tau_slope * y_norm * 10.0))
+
+    def step(self, u: float) -> float:
+        u_delayed = self._u_buffer.pop(0)
+        self._u_buffer.append(u)
+
+        k_eff = self._K_eff()
+        t_eff = self._T_eff()
+        dydt = (k_eff * u_delayed - self.y) / t_eff
+        self.y += dydt * self.dt
+        return self.y
+
+
 # ─── Helper ───────────────────────────────────────────────────────────────────
 
 def _save(fig: plt.Figure, name: str) -> None:

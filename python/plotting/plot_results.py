@@ -10,7 +10,6 @@ Run as a module from the ``python/`` directory:
 
 from __future__ import annotations
 
-import sys
 import os
 import math
 import numpy as np
@@ -19,11 +18,9 @@ matplotlib.use("Agg")  # non-interactive backend
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 from simulation.bang_bang_control import BangBangController, simulate_bang_bang
 from simulation.pid_controller import PIDController
-from simulation.plant_models import FOPDTPlant, NonlinearFOPDTPlant
+from simulation.plant_models import FOPDTPlant
 from analysis.parameter_estimation import (
     extract_limit_cycle_characteristics,
     identify_fopdt_from_transients,
@@ -55,13 +52,6 @@ LC_PLOT_WINDOW    = config.LC_PLOT_WINDOW
 STEP_T_END        = config.STEP_T_END
 STEP_PRE_TIME     = config.STEP_PRE_TIME
 STEP_SIZE         = config.STEP_SIZE
-SWEEP_SETPOINTS   = config.SWEEP_SETPOINTS
-SWEEP_PLOT_WINDOW = config.SWEEP_PLOT_WINDOW
-NL_TARGET_SP      = config.NL_TARGET_SP
-NL_STEP_T_END     = config.NL_STEP_T_END
-NL_STEP_PRE_TIME  = config.NL_STEP_PRE_TIME
-NL_STEP_SIZE      = config.NL_STEP_SIZE
-
 # Matplotlib style
 plt.rcParams.update({
     "font.size": 10,
@@ -70,55 +60,6 @@ plt.rcParams.update({
     "figure.dpi": 150,
     "lines.linewidth": 1.5,
 })
-
-
-class NonlinearFOPDTPlant:
-    """Synthetic nonlinear FOPDT-like plant for preview figures.
-
-    This keeps the same structure as a delayed first-order plant, but lets
-    process gain and time constant vary smoothly with operating point.
-    """
-
-    def __init__(
-        self,
-        K0: float,
-        T0: float,
-        L: float,
-        dt: float = 0.1,
-        y0: float = 0.0,
-        y_ref: float = 20.0,
-        gain_slope: float = -0.015,
-        tau_slope: float = 0.02,
-    ) -> None:
-        self.K0 = K0
-        self.T0 = T0
-        self.L = L
-        self.dt = dt
-        self.y = y0
-        self.y_ref = y_ref
-        self.gain_slope = gain_slope
-        self.tau_slope = tau_slope
-
-        self._delay_steps = max(1, int(round(L / dt)))
-        self._u_buffer: list[float] = [0.0] * self._delay_steps
-
-    def _K_eff(self) -> float:
-        y_norm = (self.y - self.y_ref) / max(abs(self.y_ref), 1.0)
-        return max(0.05, self.K0 * (1.0 + self.gain_slope * y_norm * 10.0))
-
-    def _T_eff(self) -> float:
-        y_norm = (self.y - self.y_ref) / max(abs(self.y_ref), 1.0)
-        return max(5.0, self.T0 * (1.0 + self.tau_slope * y_norm * 10.0))
-
-    def step(self, u: float) -> float:
-        u_delayed = self._u_buffer.pop(0)
-        self._u_buffer.append(u)
-
-        k_eff = self._K_eff()
-        t_eff = self._T_eff()
-        dydt = (k_eff * u_delayed - self.y) / t_eff
-        self.y += dydt * self.dt
-        return self.y
 
 
 # ─── Helper ───────────────────────────────────────────────────────────────────
@@ -142,25 +83,139 @@ def plot_limit_cycle() -> dict:
 
     chars = extract_limit_cycle_characteristics(t, y, e, n_cycles=5)
 
-    # Plot last LC_PLOT_WINDOW s to show stationary cycles clearly
+    # Show the last LC_PLOT_WINDOW s to present stationary cycles clearly.
+    # Use a relative time axis (t = 0 at the start of the window).
     mask = t >= (t[-1] - LC_PLOT_WINDOW)
+    t_w = t[mask] - t[mask][0]
+    y_w = y[mask]
+    u_w = u[mask]
 
-    fig, axes = plt.subplots(2, 1, figsize=(8, 5), sharex=True)
+    # ── Colour palette ────────────────────────────────────────────────────
+    C_PROC  = "#2166ac"   # process variable
+    C_SP    = "#555555"   # setpoint / band edges
+    C_BAND  = "#e8f0f8"   # hysteresis band fill
+    C_CTRL  = "#c0392b"   # control output
+    C_ANNOT = "#333333"   # annotation ink
 
-    axes[0].plot(t[mask], y[mask], color="steelblue", label=r"$y(t)$")
-    axes[0].axhline(SETPOINT, color="gray", linestyle="--", linewidth=1.0, label=r"Setpoint $r$")
-    axes[0].set_ylabel("Temperature (°C)")
-    axes[0].legend(loc="upper right")
-    axes[0].set_title("Bang-Bang Limit Cycle — Benchmark Cooling Plant")
+    fig, (ax_y, ax_u) = plt.subplots(
+        2, 1, figsize=(8, 5), sharex=True,
+        layout="constrained",
+        gridspec_kw={"height_ratios": [3, 2], "hspace": 0.06},
+    )
 
-    axes[1].step(t[mask], u[mask], color="darkorange", where="post", label=r"$u(t)$")
-    axes[1].set_ylabel("Control output (%)")
-    axes[1].set_xlabel("Time (s)")
-    axes[1].legend(loc="upper right")
-    axes[1].set_ylim(-10, 110)
-    axes[1].yaxis.set_major_locator(ticker.MultipleLocator(25))
+    # ── Upper panel: process variable ─────────────────────────────────────
+    # Hysteresis band
+    ax_y.axhspan(SETPOINT - BB_D, SETPOINT + BB_D,
+                 color=C_BAND, linewidth=0, zorder=0)
+    ax_y.axhline(SETPOINT - BB_D, color=C_SP, linewidth=0.7,
+                 linestyle="--", dashes=(4, 4), zorder=1)
+    ax_y.axhline(SETPOINT + BB_D, color=C_SP, linewidth=0.7,
+                 linestyle="--", dashes=(4, 4), zorder=1)
+    # Setpoint
+    ax_y.axhline(SETPOINT, color=C_SP, linewidth=1.1,
+                 linestyle="--", zorder=2, label=rf"Setpoint $r = {SETPOINT:.0f}$°C")
+    # Process variable
+    ax_y.plot(t_w, y_w, color=C_PROC, linewidth=1.6, zorder=3, label=r"$y(t)$")
 
-    fig.tight_layout()
+    # ── Annotate period T_u ───────────────────────────────────────────────
+    T_u = chars["T_u"]
+    A   = chars["A"]
+    e_w = SETPOINT - y_w
+    pos_cross = np.where((e_w[:-1] <= 0) & (e_w[1:] > 0))[0]
+
+    y_range = y_w.max() - y_w.min()
+    # Reserve headroom above the signal for the T_u arrow + label
+    ax_y.set_ylim(y_w.min() - 0.06 * y_range, y_w.max() + 0.38 * y_range)
+
+    if len(pos_cross) >= 2:
+        t1 = float(np.interp(0, [e_w[pos_cross[-2]], e_w[pos_cross[-2] + 1]],
+                             [t_w[pos_cross[-2]], t_w[pos_cross[-2] + 1]]))
+        t2 = float(np.interp(0, [e_w[pos_cross[-1]], e_w[pos_cross[-1] + 1]],
+                             [t_w[pos_cross[-1]], t_w[pos_cross[-1] + 1]]))
+        arrow_y = y_w.max() + 0.16 * y_range
+        ax_y.annotate(
+            "", xy=(t2, arrow_y), xytext=(t1, arrow_y),
+            arrowprops=dict(arrowstyle="<->", color=C_ANNOT,
+                            lw=1.2, shrinkA=0, shrinkB=0),
+        )
+        ax_y.text(
+            (t1 + t2) / 2, arrow_y + 0.04 * y_range,
+            rf"$T_u = {T_u:.1f}$ s",
+            ha="center", va="bottom", fontsize=8.5, color=C_ANNOT,
+            bbox=dict(boxstyle="round,pad=0.2", fc="white", ec="none", alpha=0.85),
+        )
+
+    # ── Annotate peak-to-peak amplitude A_u ──────────────────────────────
+    # Place the arrow at ~65 % of the window where the signal is centred;
+    # text sits to the right inside the axes with a white background box.
+    # shrinkA/B=0 so arrowheads land exactly on the peak/trough data values.
+    x_ann = t_w[-1] * 0.65
+    ax_y.annotate(
+        "", xy=(x_ann, SETPOINT + A), xytext=(x_ann, SETPOINT - A),
+        arrowprops=dict(arrowstyle="<->", color=C_ANNOT,
+                        lw=1.2, shrinkA=0, shrinkB=0),
+    )
+    ax_y.text(
+        x_ann + 0.018 * t_w[-1], SETPOINT,
+        rf"$A_u = {2*A:.2f}$ °C",
+        ha="left", va="center", fontsize=8.5, color=C_ANNOT,
+        bbox=dict(boxstyle="round,pad=0.25", fc="white", ec="none", alpha=0.85),
+    )
+
+    ax_y.set_ylabel("Temperature (°C)")
+    ax_y.legend(loc="upper left", framealpha=0.9, fontsize=8.5,
+                handlelength=1.6, borderpad=0.6)
+    ax_y.set_title("Bang-Bang Limit Cycle — Benchmark Cooling Plant", pad=6)
+    ax_y.yaxis.set_minor_locator(ticker.AutoMinorLocator(2))
+    ax_y.grid(True, which="major", linewidth=0.5, color="#dddddd", zorder=0)
+    ax_y.grid(True, which="minor", linewidth=0.25, color="#eeeeee", zorder=0)
+
+    # ── Lower panel: control output ───────────────────────────────────────
+    ax_u.fill_between(t_w, u_w, step="post",
+                      color=C_CTRL, alpha=0.15, linewidth=0, zorder=1)
+    ax_u.step(t_w, u_w, color=C_CTRL, where="post",
+              linewidth=1.5, zorder=2, label=r"$u(t)$")
+    # ON / OFF text labels — both at the same vertical centre (y = 50 %)
+    # Pick the horizontal centre of the longest continuous run in each state.
+    threshold = (BB_U_MAX + BB_U_MIN) / 2
+    for state_val, label_str in [(BB_U_MAX, "ON"), (BB_U_MIN, "OFF")]:
+        state_mask = u_w == state_val
+        if not state_mask.any():
+            continue
+        # Find all contiguous runs in this state
+        padded = np.concatenate(([False], state_mask, [False]))
+        starts = np.where(~padded[:-1] & padded[1:])[0]
+        ends   = np.where( padded[:-1] & ~padded[1:])[0]
+        # Pick the longest run
+        lengths = ends - starts
+        best = np.argmax(lengths)
+        t_center = (t_w[starts[best]] + t_w[min(ends[best], len(t_w) - 1)]) / 2
+        ax_u.text(
+            t_center, 50, label_str,
+            ha="center", va="center", fontsize=8.0,
+            color=C_CTRL, alpha=0.65,
+            bbox=dict(boxstyle="round,pad=0.25", fc="white", ec="none", alpha=0.6),
+        )
+
+    ax_u.set_ylabel("Control output (%)")
+    ax_u.set_xlabel("Time (s)")
+    ax_u.legend(loc="upper right", framealpha=0.9, fontsize=8.5)
+    ax_u.set_ylim(-12, 115)
+    ax_u.set_yticks([0, 50, 100])
+    ax_u.yaxis.set_minor_locator(ticker.NullLocator())
+    ax_u.grid(True, which="major", linewidth=0.5, color="#dddddd", zorder=0)
+
+    # ── Vertical markers at switching events ──────────────────────────────
+    # Use a long-dash pattern (8 pt on, 4 pt off) in a medium gray so the
+    # markers are clearly intentional but don't compete with the data lines.
+    sw_idx = np.where(np.diff(u_w) != 0)[0]
+    for i in sw_idx:
+        ts = t_w[i]
+        ax_y.axvline(ts, color="#999999", linewidth=0.8,
+                     linestyle=(0, (6, 4)), zorder=1)
+        ax_u.axvline(ts, color="#999999", linewidth=0.8,
+                     linestyle=(0, (6, 4)), zorder=1)
+
     _save(fig, "limit_cycle.pdf")
     return chars
 
@@ -268,25 +323,13 @@ def plot_step_response_comparison(fopdt_params: dict) -> None:
 
 def _run_setpoint_identification(
     setpoint: float,
-    nonlinear: bool,
     t_end: float,
     K: float = PLANT_K,
     T: float = PLANT_T,
     L: float = PLANT_L,
     dt: float = DT,
 ) -> dict[str, float] | None:
-    if nonlinear:
-        plant = NonlinearFOPDTPlant(
-            K0=K,
-            T0=T,
-            L=L,
-            dt=dt,
-            y0=setpoint,
-            y_ref=SETPOINT,
-        )
-    else:
-        plant = FOPDTPlant(K=K, T=T, L=L, dt=dt, y0=setpoint)
-
+    plant = FOPDTPlant(K=K, T=T, L=L, dt=dt, y0=setpoint)
     ctrl = BangBangController(u_max=BB_U_MAX, u_min=BB_U_MIN, d=BB_D)
     t, y, u = simulate_bang_bang(plant, ctrl, setpoint, t_end=t_end, dt=dt)
     e = setpoint - y
@@ -308,218 +351,7 @@ def _run_setpoint_identification(
         return None
 
 
-def plot_setpoint_sweep_preview() -> None:
-    """Preview how linear vs nonlinear plants look under setpoint sweeps."""
-    setpoints = np.array(SWEEP_SETPOINTS)
-
-    linear_estimates: list[dict[str, float]] = []
-    nonlinear_estimates: list[dict[str, float]] = []
-
-    fig_lc, axes_lc = plt.subplots(2, 2, figsize=(10, 6), sharex=True, sharey=True)
-    axes_flat = axes_lc.flatten()
-
-    for idx, sp in enumerate(setpoints):
-        plant_nl = NonlinearFOPDTPlant(
-            K0=PLANT_K,
-            T0=PLANT_T,
-            L=PLANT_L,
-            dt=DT,
-            y0=sp,
-            y_ref=SETPOINT,
-        )
-        ctrl_nl = BangBangController(u_max=BB_U_MAX, u_min=BB_U_MIN, d=BB_D)
-        t_nl, y_nl, _ = simulate_bang_bang(plant_nl, ctrl_nl, sp, t_end=SIM_T_END, dt=DT)
-
-        mask = t_nl >= (t_nl[-1] - SWEEP_PLOT_WINDOW)
-        ax = axes_flat[idx]
-        ax.plot(t_nl[mask], y_nl[mask], color="firebrick", label="Nonlinear")
-        ax.axhline(sp, color="gray", linestyle="--", linewidth=0.8)
-        ax.set_title(f"Setpoint {sp:.0f} °C")
-        ax.set_ylabel("y (°C)")
-        ax.grid(alpha=0.2)
-
-        lin = _run_setpoint_identification(sp, nonlinear=False, t_end=SIM_T_END)
-        nl = _run_setpoint_identification(sp, nonlinear=True, t_end=SIM_T_END)
-        if lin is not None:
-            linear_estimates.append(lin)
-        if nl is not None:
-            nonlinear_estimates.append(nl)
-
-    for ax in axes_lc[-1, :]:
-        ax.set_xlabel("Time (s)")
-    fig_lc.suptitle("Limit-Cycle Preview for a Setpoint Sweep (Nonlinear Plant)")
-    fig_lc.tight_layout()
-    _save(fig_lc, "setpoint_sweep_limit_cycles_preview.pdf")
-
-    if not linear_estimates or not nonlinear_estimates:
-        print("Setpoint sweep preview skipped: not enough valid estimates.")
-        return
-
-    sp_lin = np.array([dct["setpoint"] for dct in linear_estimates])
-    sp_nl = np.array([dct["setpoint"] for dct in nonlinear_estimates])
-
-    fig, axes = plt.subplots(3, 1, figsize=(8, 8), sharex=True)
-    params = ["K", "T", "L"]
-    ylabels = ["Estimated K", "Estimated T (s)", "Estimated L (s)"]
-
-    for i, (p, ylabel) in enumerate(zip(params, ylabels)):
-        axes[i].plot(
-            sp_lin,
-            [dct[p] for dct in linear_estimates],
-            "o-",
-            color="steelblue",
-            label="Linear benchmark",
-        )
-        axes[i].plot(
-            sp_nl,
-            [dct[p] for dct in nonlinear_estimates],
-            "s-",
-            color="firebrick",
-            label="Synthetic nonlinear",
-        )
-        axes[i].set_ylabel(ylabel)
-        axes[i].grid(alpha=0.25)
-
-    axes[0].legend(loc="best")
-    axes[-1].set_xlabel("Setpoint (°C)")
-    fig.suptitle("Identified FOPDT Parameters vs Setpoint")
-    fig.tight_layout()
-    _save(fig, "setpoint_sweep_identification_preview.pdf")
-
-
-# ─── Figure 3: Nonlinear plant analysis ──────────────────────────────────────
-
-def plot_nonlinear_analysis() -> None:
-    """Generate publication figures for the nonlinear extensions section.
-
-    Produces two figures:
-    1. ``nonlinear_param_variation.pdf`` — True K_eff and T_eff vs operating
-       point (analytical) overlaid with KZV-identified values from Bang-Bang
-       experiments at each setpoint.
-    2. ``nonlinear_step_response.pdf`` — Closed-loop step responses comparing:
-       (a) a single KZV PID (tuned at the nominal 20 °C setpoint) applied at a
-       different operating point, vs (b) a locally re-identified KZV PID tuned
-       at the target setpoint.
-    """
-    # ── Setpoint grid ──────────────────────────────────────────────────────
-    setpoints = np.array([15.0, 18.0, 20.0, 22.0, 25.0, 28.0, 30.0])
-    ref_plant = NonlinearFOPDTPlant(K0=PLANT_K, T0=PLANT_T, L=PLANT_L,
-                                    dt=DT, y_ref=SETPOINT)
-
-    K_true = np.array([ref_plant.K_eff(sp) for sp in setpoints])
-    T_true = np.array([ref_plant.T_eff(sp) for sp in setpoints])
-
-    K_est, T_est, L_est, sp_ok = [], [], [], []
-
-    print("  Running KZV identification sweep across setpoints …")
-    for sp in setpoints:
-        result = _run_setpoint_identification(sp, nonlinear=True, t_end=SIM_T_END)
-        if result is not None:
-            K_est.append(result["K"])
-            T_est.append(result["T"])
-            L_est.append(result["L"])
-            sp_ok.append(sp)
-
-    sp_ok = np.array(sp_ok)
-    K_est = np.array(K_est)
-    T_est = np.array(T_est)
-    L_est = np.array(L_est)
-
-    # ── Figure 3a: parameter variation ────────────────────────────────────
-    y_grid = np.linspace(10.0, 35.0, 200)
-    K_curve = np.array([ref_plant.K_eff(y) for y in y_grid])
-    T_curve = np.array([ref_plant.T_eff(y) for y in y_grid])
-
-    fig, axes = plt.subplots(2, 1, figsize=(7, 5), sharex=True)
-
-    axes[0].plot(y_grid, K_curve, color="steelblue", label="True $K_{\\mathrm{eff}}(y)$")
-    axes[0].scatter(sp_ok, K_est, color="darkorange", zorder=5, label="KZV estimate $\\hat{K}$")
-    axes[0].set_ylabel("Process gain $K$ [°C/%]")
-    axes[0].legend()
-    axes[0].grid(alpha=0.25)
-
-    axes[1].plot(y_grid, T_curve, color="steelblue", label="True $T_{\\mathrm{eff}}(y)$")
-    axes[1].scatter(sp_ok, T_est, color="darkorange", zorder=5, label="KZV estimate $\\hat{T}$")
-    axes[1].set_ylabel("Time constant $T$ [s]")
-    axes[1].set_xlabel("Operating point / setpoint (°C)")
-    axes[1].legend()
-    axes[1].grid(alpha=0.25)
-
-    fig.suptitle("Identified FOPDT Parameters vs Operating Point — Nonlinear Plant",
-                 fontsize=10)
-    fig.tight_layout()
-    _save(fig, "nonlinear_param_variation.pdf")
-
-    # ── Figure 3b: step responses — nominal vs local KZV ──────────────────
-    target_sp = NL_TARGET_SP  # operating point away from nominal
-
-    # Nominal KZV: tuned at setpoint=20 °C, applied at target_sp
-    nom_result = _run_setpoint_identification(SETPOINT, nonlinear=True, t_end=SIM_T_END)
-    # Local KZV: tuned at target_sp
-    loc_result = _run_setpoint_identification(target_sp, nonlinear=True, t_end=SIM_T_END)
-    # Ideal: tuned with exact local K/T at target_sp
-    ideal_params = {"K": ref_plant.K_eff(target_sp),
-                    "T": ref_plant.T_eff(target_sp),
-                    "L": PLANT_L}
-
-    if nom_result is None or loc_result is None:
-        print("  Skipping nonlinear step response figure (identification failed).")
-        return
-
-    def _fopdt_only(d: dict) -> dict:
-        return {"K": d["K"], "T": d["T"], "L": d["L"]}
-
-    configs = [
-        ("Nominal KZV (at 20 °C)", imc_pid(**_fopdt_only(nom_result)), "steelblue"),
-        (f"Local KZV (at {target_sp:.0f} °C)", imc_pid(**_fopdt_only(loc_result)), "darkorange"),
-        ("Ideal local IMC", imc_pid(**ideal_params), "green"),
-    ]
-
-    t_end_step = NL_STEP_T_END
-    step_time = NL_STEP_PRE_TIME
-    step_size = NL_STEP_SIZE
-
-    fig, ax = plt.subplots(figsize=(9, 5))
-
-    for label, pid_p, color in configs:
-        plant = NonlinearFOPDTPlant(K0=PLANT_K, T0=PLANT_T, L=PLANT_L,
-                                    dt=DT, y0=target_sp, y_ref=SETPOINT)
-        ctrl = PIDController(K_p=pid_p["K_p"], T_i=pid_p["T_i"], T_d=pid_p["T_d"],
-                             dt=DT, u_min=BB_U_MIN, u_max=BB_U_MAX)
-        n_steps = int(t_end_step / DT)
-        t_arr = np.arange(n_steps) * DT
-        y_arr = np.empty(n_steps)
-        for k in range(n_steps):
-            sp_k = target_sp + (step_size if t_arr[k] >= step_time else 0.0)
-            u_k = ctrl.compute(sp_k, plant.y)
-            y_arr[k] = plant.step(u_k)
-
-        ax.plot(t_arr - step_time, y_arr - target_sp, color=color, label=label)
-
-    ax.axhline(step_size, color="gray", linestyle="--", linewidth=1.0, label="Setpoint step")
-    ax.axhline(step_size * 1.05, color="lightgray", linestyle=":", linewidth=0.8)
-    ax.axhline(step_size * 0.95, color="lightgray", linestyle=":", linewidth=0.8)
-    ax.set_xlabel("Time after step (s)")
-    ax.set_ylabel("Output change (\N{DEGREE SIGN}C)")
-    ax.legend()
-    ax.set_xlim(-20, t_end_step - step_time)
-    fig.suptitle(
-        f"Nonlinear Plant \u2014 Step Response at {target_sp:.0f}\N{DEGREE SIGN}C Operating Point",
-        fontsize=11, y=1.005,
-    )
-    param_str = (
-        f"$K_0={PLANT_K}$, $T_0={PLANT_T:.0f}$ s, $L={PLANT_L:.0f}$ s  |  "
-        f"$u_{{\\max}}={BB_U_MAX:.0f}$, $u_{{\\min}}={BB_U_MIN:.0f}$  |  "
-        f"step = +{NL_STEP_SIZE:.0f}\N{DEGREE SIGN}C at $t=0$  |  shaded band = \u00b15\u202f%%"
-    )
-    fig.text(0.5, -0.01, param_str, ha="center", va="top", fontsize=9,
-             color="dimgray",
-             bbox=dict(boxstyle="round,pad=0.3", fc="#f5f5f5", ec="lightgray", alpha=0.9))
-    fig.tight_layout(rect=[0, 0, 1, 1])
-    _save(fig, "nonlinear_step_response.pdf")
-
-
-# ─── Figure 4: PID setpoint comparison (mirrors intro duty-cycle grid) ───────
+# ─── Figure 3: PID setpoint comparison (mirrors intro duty-cycle grid) ───────
 
 _PID_COLORS = ["#1565C0", "#2E7D32", "#BF360C"]  # same palette as intro figures
 
@@ -637,7 +469,7 @@ def plot_pid_setpoint_comparison() -> None:
 
             print(f"  KZV ID: plant L/T={pL/pT:.1f}, setpoint {r:.0f} °C …")
             result = _run_setpoint_identification(
-                r, nonlinear=False, t_end=SIM_T_END,
+                r, t_end=SIM_T_END,
                 K=PLANT_K, T=pT, L=pL,
             )
             if result is None:
@@ -801,13 +633,7 @@ def main() -> None:
     print("\nGenerating Figure 2: Step response comparison …")
     plot_step_response_comparison(fopdt_params)
 
-    print("\nGenerating preview: setpoint sweep nonlinearity figures …")
-    plot_setpoint_sweep_preview()
-
-    print("\nGenerating Figure 3: Nonlinear plant analysis …")
-    plot_nonlinear_analysis()
-
-    print("\nGenerating Figure 4: PID setpoint comparison …")
+    print("\nGenerating Figure 3: PID setpoint comparison …")
     plot_pid_setpoint_comparison()
 
     print("\nAll figures saved to paper/figures/")

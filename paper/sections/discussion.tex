@@ -1,9 +1,6 @@
 \section{Discussion}
 \label{sec:discussion}
 
-\subsection{Accuracy of the Identification}
-\label{sec:disc:accuracy}
-
 The describing function approximation used in \cref{sec:theory:df} assumes
 that the plant sufficiently attenuates higher harmonics of the relay switching
 signal, so that the fundamental frequency component dominates.
@@ -37,30 +34,13 @@ A practical mitigation strategy is to:
 
 The FOPDT identification described in this paper is intentionally conservative:
 it maps any higher-order plant onto a simple FOPDT model.
-For plants where a second time constant is significant (such as
-\eqref{eq:plant}), the estimated dead time $\hat{L}$ absorbs part of the
+For plants where a second time constant is significant, the estimated dead time $\hat{L}$ absorbs part of the
 lag contributed by $T_2$, leading to a slightly conservative (i.e.\
 detuned) PID.
 This is generally desirable for robust industrial control.
 An extension using a second-order relay feedback test~\cite{Wang1999}
 is left for future work.
 
-\subsection{Robustness to Mild Plant Nonlinearities}
-\label{sec:disc:nonlinear}
-
-The KZV derivation assumes a linear FOPDT plant, yet it retains a useful degree
-of robustness to mild operating-point-dependent parameter variation.
-Because the Bang-Bang limit cycle oscillates around a single setpoint~$r$
-with amplitude~$\Au$, the identification is effectively performed on the
-\emph{local linearisation} of the plant at~$r$: in the limit of small
-hysteresis $d \ll \Au$, the estimates $(\hat{K}, \hat{T}, \hat{L})$ converge
-to the true local FOPDT parameters at the current operating point.
-For plants with moderate nonlinearities --- such as the gain and time-constant
-variation typical of thermal and cooling circuits --- this means that repeating
-the KZV identification at any new setpoint yields correctly updated PID
-parameters without requiring an explicit nonlinear model.
-A formal extension to gain-scheduled tuning across a range of operating
-points is left for future work.
 
 \subsection{Limitations}
 \label{sec:disc:limitations}

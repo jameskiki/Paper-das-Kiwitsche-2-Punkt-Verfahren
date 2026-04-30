@@ -9,7 +9,7 @@ Run any plotting module from the ``python/`` directory after editing:
 
 # ── Benchmark (slow) FOPDT plant ─────────────────────────────────────────────
 # Representative industrial heating/cooling process.
-PLANT_K = 0.4      # process gain           [°C / %]
+PLANT_K = 0.5      # process gain           [°C / %]
 PLANT_T = 120.0    # time constant          [s]
 PLANT_L = 20.0     # dead time              [s]
 
@@ -48,11 +48,6 @@ DT_DEAD = 0.1      # for dead-time-dominant plant      [s]
 SETPOINT  = 20.0              # nominal setpoint used in results figures  [°C]
 SETPOINTS  = [15.0, 20.0, 25.0]  # setpoint sweep used in intro figures   [°C]
 
-# ── Intro duty-cycle figure display ──────────────────────────────────────────
-# Each cell auto-scales to 3 complete limit cycles (t_window=None).
-# DC_PLOT_WINDOW is kept here in case a fixed window is ever needed.
-DC_PLOT_WINDOW = 200.0   # [s]  (unused by default)
-
 # ── Simulation lengths ────────────────────────────────────────────────────────
 SIM_T_END = 3000.0   # default bang-bang run length for limit-cycle ID  [s]
 
@@ -64,12 +59,4 @@ STEP_T_END    = 1200.0   # total simulation length for the step response    [s]
 STEP_PRE_TIME = 100.0    # pre-step settle time                             [s]
 STEP_SIZE     = 5.0      # step magnitude                                   [°C]
 
-# ── Setpoint-sweep preview ────────────────────────────────────────────────────
-SWEEP_SETPOINTS    = [15.0, 20.0, 25.0, 30.0]   # setpoints for the sweep preview
-SWEEP_PLOT_WINDOW  = 700.0   # trailing window shown per subplot            [s]
 
-# ── Nonlinear analysis figures (Figure 3) ────────────────────────────────────
-NL_TARGET_SP      = 28.0    # off-nominal operating point for Figure 3b    [°C]
-NL_STEP_T_END     = 1200.0  # simulation length for nonlinear step response [s]
-NL_STEP_PRE_TIME  = 50.0    # pre-step settle time for nonlinear response   [s]
-NL_STEP_SIZE      = 3.0     # step magnitude for nonlinear response         [°C]

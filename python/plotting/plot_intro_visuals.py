@@ -19,7 +19,6 @@ Run as a module from the ``python/`` directory:
 
 from __future__ import annotations
 
-import sys
 import os
 
 import numpy as np
@@ -28,8 +27,6 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from simulation.bang_bang_control import BangBangController, simulate_bang_bang
 from simulation.plant_models import FOPDTPlant
@@ -66,7 +63,6 @@ BB_D      = config.BB_D
 
 SETPOINTS  = config.SETPOINTS
 SIM_T_END  = config.SIM_T_END
-DC_PLOT_WINDOW = config.DC_PLOT_WINDOW
 COLORS = ["#1565C0", "#2E7D32", "#BF360C"]
 
 plt.rcParams.update({

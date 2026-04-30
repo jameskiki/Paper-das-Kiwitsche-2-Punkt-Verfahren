@@ -1,18 +1,14 @@
-This paper presents the \emph{Kiwitsche 2-Punkt-Verfahren}, a systematic
-procedure for estimating optimal PID control parameters for complex industrial
-processes.
-The method leverages Bang-Bang (two-point) control to excite the plant into a
-reproducible limit-cycle oscillation.
-From this oscillation, key process characteristics --- namely the ultimate
-period~$\Tu$ and the oscillation amplitude~$\Au$ --- are extracted and used to
-derive an equivalent First-Order-Plus-Dead-Time (FOPDT) model.
-Modified tuning formulas, rooted in Internal Model Control (IMC) theory, then
-translate the FOPDT model into proportional, integral, and derivative
-gains~$(\Kp, \Ti, \Td)$.
-
-The procedure requires no \textit{a priori} plant knowledge and is
-non-invasive: the Bang-Bang excitation already represents a natural operating
-mode for many industrial systems such as cooling and heating plants.
-Simulation studies on a first-order-plus-dead-time (FOPDT) plant demonstrate that the
-proposed method achieves substantially superior closed-loop performance relative
-to classical Ziegler--Nichols tuning, achieving 5.5\% overshoot versus 57.9\% and an eightfold reduction in IAE.
+The \emph{Kiwitsche 2-Punkt-Verfahren} (KZV) is a practical, four-phase
+procedure that uses an existing Bang-Bang (two-point) controller to identify an
+FOPDT plant model and synthesise an IMC-based PID controller --- all without
+requiring a separate open-loop experiment.
+The method runs the Bang-Bang controller until a stationary limit cycle is
+established, extracts the oscillation period and amplitude, and uses
+transient-slope measurements to estimate the process gain~$K$, time
+constant~$T$, and dead time~$L$.
+The identified model is then fed into the Rivera--Morari IMC-PID tuning rules
+to obtain the gains~$(\Kp, \Ti, \Td)$.
+Simulations on a benchmark FOPDT plant show that the resulting controller
+achieves \SI{5.5}{\percent} overshoot and an IAE within \SI{2}{\percent} of the
+ideal IMC result, versus \SI{57.9}{\percent} overshoot and an eightfold larger
+IAE for classical Ziegler--Nichols tuning.

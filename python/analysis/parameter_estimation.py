@@ -14,12 +14,8 @@ Run as a module for a full demonstration:
 
 from __future__ import annotations
 
-import sys
-import os
 import math
 import numpy as np
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from simulation.bang_bang_control import BangBangController, simulate_bang_bang
 from simulation.plant_models import FOPDTPlant
@@ -80,9 +76,6 @@ def extract_limit_cycle_characteristics(
     T_u = float(np.mean(periods))
 
     # Peak-to-peak amplitude over the same last n_cycles
-    start_idx = last[0][0]
-    end_idx = last[-1][0]
-    y_window = y[start_idx:end_idx]
     amplitudes = []
     for i in range(n_cycles):
         s = last[i][0]

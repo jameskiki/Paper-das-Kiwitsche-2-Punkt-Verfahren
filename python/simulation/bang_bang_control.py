@@ -7,12 +7,7 @@ Run as a module for a quick demonstration:
 
 from __future__ import annotations
 
-import sys
-import os
 import numpy as np
-
-# Allow running as a module from the python/ directory
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from simulation.plant_models import SOPDTPlant  # noqa: E402
 
@@ -79,7 +74,7 @@ class BangBangController:
 # ─── Simulation ──────────────────────────────────────────────────────────────
 
 def simulate_bang_bang(
-    plant: SOPDTPlant,
+    plant: "FOPDTPlant | SOPDTPlant",
     controller: BangBangController,
     setpoint: float,
     t_end: float,
@@ -89,8 +84,8 @@ def simulate_bang_bang(
 
     Parameters
     ----------
-    plant : SOPDTPlant
-        Plant instance (will be modified in place).
+    plant : FOPDTPlant | SOPDTPlant
+        Any plant with a ``step(u) -> float`` method and a ``y`` attribute.
     controller : BangBangController
         Bang-Bang controller instance.
     setpoint : float
